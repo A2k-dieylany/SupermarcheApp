@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang='fr'>
+<head>
+    <meta charset="UTF-8">
+    <title>Gestion Supermarché - ISI</title>
+    <link rel='stylesheet' href='style.css'>
+</head>
+<body>
+    <header>
+        <h1>Supermarché - Gestion des Caisses</h1>
+    </header>
+
+    <section id='controles'>
+        <div class="groupe-controle">
+            <h3>Nouveau Client</h3>
+            <input type='text' id='nomClient' placeholder='Nom du client'>
+            <input type='number' id='nbArticles' placeholder='Nb articles' min='1' value='1'>
+            <button onclick='ajouterClient()'>Ajouter à une caisse</button>
+        </div>
+
+        <div class="groupe-controle">
+            <h3>Gérer les Caisses</h3>
+            <input type='number' id='numeroCaisse' placeholder='N° caisse'>
+            <button onclick='servirClient()'>Servir client</button>
+            <button onclick='ouvrirCaisse()'>Ouvrir</button>
+            <button onclick='fermerCaisse()'>Fermer</button>
+        </div>
+    </section>
+
+    <section id='statistiques'>
+        <h2>Total clients servis : <span id='totalServis'>0</span></h2>
+    </section>
+
+    <section id='grille-caisses'></section>
+
+    <script src='app.js'></script>
+</body>
+</html>
