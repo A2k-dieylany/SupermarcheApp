@@ -2,14 +2,50 @@
 #include <stdexcept>
 #include <iostream>
 #include <algorithm>
+#include <string>
 
-// --- INITIALISATION ---
+// --- INITIALISATION & PERSISTANCE (SQLITE) ---
+
 Supermarche::Supermarche() {
-    catalogue.push_back(Produit(1, "Baguette", 0.50, "Boulangerie"));
-    catalogue.push_back(Produit(2, "Lait de vache", 1.20, "Frais"));
-    catalogue.push_back(Produit(3, "Riz (1kg)", 2.50, "Épicerie"));
-    catalogue.push_back(Produit(4, "Café moulu", 3.80, "Épicerie"));
-    catalogue.push_back(Produit(5, "Savon", 1.50, "Hygiène"));
+    // 1. Connexion au fichier de base de données
+    if (sqlite3_open("supermarche.db", &db)) {
+        throw std::runtime_error("Erreur fatale : Impossible d'ouvrir la base de données !");
+    }
+    
+    // 2. Création de la structure SQL
+    initialiserBaseDeDonnees();
+}
+
+Supermarche::~Supermarche() {
+    // On ferme la connexion proprement pour libérer les ressources système
+    sqlite3_close(db);
+}
+
+void Supermarche::initialiserBaseDeDonnees() {
+    char* messageErreur = nullptr;
+    
+    // Requête SQL pour créer la table des produits si elle n'existe pas
+    const char* sql = 
+        "CREATE TABLE IF NOT EXISTS produits ("
+        "id INTEGER PRIMARY KEY, "
+        "nom TEXT NOT NULL, "
+        "prix REAL NOT NULL, "
+        "categorie TEXT NOT NULL);";
+
+    if (sqlite3_exec(db, sql, nullptr, nullptr, &messageErreur) != SQLITE_OK) {
+        std::string err(messageErreur);
+        sqlite3_free(messageErreur);
+        throw std::runtime_error("Erreur SQL : " + err);
+    }
+    
+    // Si la base est neuve (vide), on injecte le catalogue par défaut
+    if (getCatalogue().empty()) {
+        ajouterProduit(Produit(1, "Baguette", 0.50, "Boulangerie"));
+        ajouterProduit(Produit(2, "Lait de vache", 1.20, "Frais"));
+        ajouterProduit(Produit(3, "Riz (1kg)", 2.50, "Épicerie"));
+        ajouterProduit(Produit(4, "Café moulu", 3.80, "Épicerie"));
+        ajouterProduit(Produit(5, "Savon", 1.50, "Hygiène"));
+    }
 }
 
 void Supermarche::initialiser(int nbCaisses) {
@@ -19,16 +55,15 @@ void Supermarche::initialiser(int nbCaisses) {
     }
 }
 
-// --- LOGIQUE MÉTIER ---
+// --- LOGIQUE MÉTIER (LES CAISSES RESTENT EN RAM POUR LA VITESSE) ---
+
 void Supermarche::ajouterClient(const Client& client) {
-    if (caisses.empty()) {
-        throw std::runtime_error("Erreur : Aucune caisse n'est installée.");
-    }
+    if (caisses.empty()) throw std::runtime_error("Erreur : Aucune caisse installée.");
 
     int nbArticles = client.getNbArticles();
     Caisse* caisseChoisie = nullptr;
     
-    // 1. Cherche une caisse express vide/la moins pleine
+    // Priorité aux caisses express pour les petits paniers
     if (nbArticles <= 10) {
         for (auto& c : caisses) {
             if (c.estOuverte() && c.isExpress()) {
@@ -39,21 +74,10 @@ void Supermarche::ajouterClient(const Client& client) {
         }
     }
 
-    // 2. Sinon, cherche une caisse normale
+    // Sinon, on cherche la caisse normale la moins chargée
     if (!caisseChoisie) {
         for (auto& c : caisses) {
             if (c.estOuverte() && !c.isExpress()) {
-                if (!caisseChoisie || c.getTailleFile() < caisseChoisie->getTailleFile()) {
-                    caisseChoisie = &c;
-                }
-            }
-        }
-    }
-
-    // 3. En dernier recours, n'importe quelle caisse ouverte
-    if (!caisseChoisie) {
-        for (auto& c : caisses) {
-            if (c.estOuverte()) {
                 if (!caisseChoisie || c.getTailleFile() < caisseChoisie->getTailleFile()) {
                     caisseChoisie = &c;
                 }
@@ -76,71 +100,76 @@ void Supermarche::servirClient(int numeroCaisse) {
             return;
         }
     }
-    throw std::runtime_error("Erreur : La caisse n'existe pas.");
+    throw std::runtime_error("Caisse introuvable.");
 }
 
 void Supermarche::ouvrirCaisse(int numero) {
     for (auto& c : caisses) {
-        if (c.getNumero() == numero) {
-            c.ouvrir();
-            return;
-        }
+        if (c.getNumero() == numero) { c.ouvrir(); return; }
     }
-    throw std::runtime_error("Erreur : La caisse n'existe pas.");
 }
 
 void Supermarche::fermerCaisse(int numero) {
     for (auto& c : caisses) {
-        if (c.getNumero() == numero) {
-            c.fermer();
-            return;
-        }
+        if (c.getNumero() == numero) { c.fermer(); return; }
     }
-    throw std::runtime_error("Erreur : La caisse n'existe pas.");
 }
 
 void Supermarche::viderCaisse(int numero) {
     for (auto& c : caisses) {
-        if (c.getNumero() == numero) {
-            c.vider();
-            return;
-        }
+        if (c.getNumero() == numero) { c.vider(); return; }
     }
-    throw std::runtime_error("Erreur : La caisse n'existe pas.");
 }
 
-// --- GETTERS (C'est eux qui manquaient !) ---
-std::vector<Caisse>& Supermarche::getCaisses() {
-    return caisses;
+// --- GESTION DU CATALOGUE (ACCÈS DISQUE SQL) ---
+
+std::vector<Produit> Supermarche::getCatalogue() {
+    std::vector<Produit> liste;
+    const char* sql = "SELECT id, nom, prix, categorie FROM produits ORDER BY categorie ASC;";
+    sqlite3_stmt* stmt;
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            int id = sqlite3_column_int(stmt, 0);
+            std::string nom = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+            double prix = sqlite3_column_double(stmt, 2);
+            std::string cat = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
+            liste.push_back(Produit(id, nom, prix, cat));
+        }
+        sqlite3_finalize(stmt);
+    }
+    return liste;
 }
 
-int Supermarche::getTotalClientsServis() const {
-    return totalClientsServis;
-}
-
-const std::vector<Produit>& Supermarche::getCatalogue() const {
-    return catalogue;
-}
-
-// --- GESTION DE L'INVENTAIRE (ADMIN) ---
 void Supermarche::ajouterProduit(const Produit& p) {
-    // Vérifie si l'ID existe déjà pour éviter les doublons
-    for (const auto& prod : catalogue) {
-        if (prod.getId() == p.getId()) {
-            throw std::runtime_error("Erreur : Un produit avec cet ID existe déjà.");
+    const char* sql = "INSERT INTO produits (id, nom, prix, categorie) VALUES (?, ?, ?, ?);";
+    sqlite3_stmt* stmt;
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_int(stmt, 1, p.getId());
+        sqlite3_bind_text(stmt, 2, p.getNom().c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_double(stmt, 3, p.getPrix());
+        sqlite3_bind_text(stmt, 4, p.getCategorie().c_str(), -1, SQLITE_TRANSIENT);
+
+        if (sqlite3_step(stmt) != SQLITE_DONE) {
+            sqlite3_finalize(stmt);
+            throw std::runtime_error("L'ID produit existe déjà en base.");
         }
+        sqlite3_finalize(stmt);
     }
-    catalogue.push_back(p);
 }
 
 void Supermarche::supprimerProduit(int id) {
-    // std::remove_if est une fonction C++ très puissante pour filtrer un tableau
-    auto it = std::remove_if(catalogue.begin(), catalogue.end(),
-        [id](const Produit& p) { return p.getId() == id; });
-        
-    if (it == catalogue.end()) {
-        throw std::runtime_error("Erreur : Produit introuvable.");
+    const char* sql = "DELETE FROM produits WHERE id = ?;";
+    sqlite3_stmt* stmt;
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_int(stmt, 1, id);
+        sqlite3_step(stmt);
+        sqlite3_finalize(stmt);
     }
-    
-    catalogue.erase(it, catalogue.end());
 }
+
+// --- GETTERS ---
+std::vector<Caisse>& Supermarche::getCaisses() { return caisses; }
+int Supermarche::getTotalClientsServis() const { return totalClientsServis; }

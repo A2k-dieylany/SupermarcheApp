@@ -7,7 +7,7 @@ TARGET = supermarche
 all: $(TARGET)
 
 $(TARGET): $(SRCS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ -pthread
+	$(CXX) $(CXXFLAGS) -o $@ $^ -pthread -lsqlite3
 
 run: all
 	./$(TARGET)

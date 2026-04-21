@@ -4,7 +4,7 @@
 
 using json = nlohmann::json;
 
-// NOUVEAU : Traduit un Produit en JSON
+// Traduit un Produit en JSON
 inline json produitToJson(const Produit& p) {
     return {
         {"id", p.getId()},
@@ -14,6 +14,7 @@ inline json produitToJson(const Produit& p) {
     };
 }
 
+// Traduit une Caisse en JSON
 inline json caisseToJson(const Caisse& c) {
     return {
         {"numero", c.getNumero()},
@@ -24,6 +25,7 @@ inline json caisseToJson(const Caisse& c) {
     };
 }
 
+// Traduit l'état global du supermarché en JSON
 inline json supermarcheToJson(Supermarche& sm) {
     json j;
     j["totalServis"] = sm.getTotalClientsServis();
@@ -33,9 +35,11 @@ inline json supermarcheToJson(Supermarche& sm) {
         j["caisses"].push_back(caisseToJson(c));
     }
     
-    // NOUVEAU : On ajoute le catalogue à la réponse globale !
     j["catalogue"] = json::array();
-    for (const auto& p : sm.getCatalogue()) {
+    
+    // CORRECTION : On utilise "auto p" au lieu de "const auto& p" 
+    // car getCatalogue() génère un vecteur tout neuf depuis la BDD SQLite.
+    for (auto p : sm.getCatalogue()) {
         j["catalogue"].push_back(produitToJson(p));
     }
     
