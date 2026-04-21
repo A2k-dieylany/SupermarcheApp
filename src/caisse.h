@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include "client.h"
 
+
 class Caisse {
 public:
     Caisse(int numero, bool estExpress = false);
@@ -20,6 +21,7 @@ public:
     
     void ouvrir();
     void fermer(); // Doit bloquer si la file n'est pas vide
+    
 
 private:
     int numero;

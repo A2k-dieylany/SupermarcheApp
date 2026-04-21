@@ -12,4 +12,5 @@ time_t Client::getTempsArrivee() const { return tempsArrivee; }
 std::string Client::toString() const {
     return "Client #" + std::to_string(id) + " : " + nom + 
            " (" + std::to_string(nbArticles) + " articles)";
+           
 }
