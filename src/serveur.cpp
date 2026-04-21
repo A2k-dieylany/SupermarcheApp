@@ -13,17 +13,30 @@ void Serveur::demarrer(Supermarche& sm) {
         res.set_header("Access-Control-Allow-Origin", "*");
     });
 
-    // 2. ACTION : Ajouter un client
+    // 2. ACTION : Ajouter un client (AVEC PANIER)
     srv.Post("/api/client/ajouter", [&](const httplib::Request& req, httplib::Response& res) {
         try {
             json body = json::parse(req.body);
-            // On extrait les valeurs du JSON envoyé par le client
-            sm.ajouterClient(body["nom"], body["nbArticles"]);
+            Client nouveauClient(body["nom"]);
+            
+            // Le web nous envoie une liste d'IDs (ex:)
+            // On cherche chaque produit dans le catalogue pour l'ajouter au panier du client
+            for (int id : body["produitsIds"]) {
+                for (const auto& p : sm.getCatalogue()) {
+                    if (p.getId() == id) {
+                        nouveauClient.ajouterProduit(p);
+                        break;
+                    }
+                }
+            }
+            
+            // On envoie le client complet (avec son panier) au supermarché
+            sm.ajouterClient(nouveauClient);
             
             res.set_content(supermarcheToJson(sm).dump(), "application/json");
             res.set_header("Access-Control-Allow-Origin", "*");
         } catch (const std::exception& e) {
-            res.status = 400; // Code d'erreur HTTP (Bad Request)
+            res.status = 400; 
             res.set_content(json{{"erreur", e.what()}}.dump(), "application/json");
             res.set_header("Access-Control-Allow-Origin", "*");
         }

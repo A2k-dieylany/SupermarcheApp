@@ -2,20 +2,80 @@
 #include <stdexcept>
 #include <iostream>
 
-Supermarche::Supermarche() : compteurId(1), totalServis(0) {}
+// --- INITIALISATION ---
+Supermarche::Supermarche() {
+    catalogue.push_back(Produit(1, "Baguette", 0.50, "Boulangerie"));
+    catalogue.push_back(Produit(2, "Lait de vache", 1.20, "Frais"));
+    catalogue.push_back(Produit(3, "Riz (1kg)", 2.50, "Épicerie"));
+    catalogue.push_back(Produit(4, "Café moulu", 3.80, "Épicerie"));
+    catalogue.push_back(Produit(5, "Savon", 1.50, "Hygiène"));
+}
 
 void Supermarche::initialiser(int nbCaisses) {
     caisses.clear();
-    
-    // Règle du cahier des charges : on crée toujours 1 caisse express fixe [cite: 217]
-    Caisse express(1, true);
-    express.ouvrir(); // La caisse express est toujours ouverte 
-    caisses.push_back(express);
-
-    // On crée les autres caisses ordinaires
-    for (int i = 0; i < nbCaisses; ++i) {
-        caisses.push_back(Caisse(i + 2, false)); 
+    for (int i = 1; i <= nbCaisses; i++) {
+        caisses.push_back(Caisse(i, i == 1)); 
     }
+}
+
+// --- LOGIQUE MÉTIER ---
+void Supermarche::ajouterClient(const Client& client) {
+    if (caisses.empty()) {
+        throw std::runtime_error("Erreur : Aucune caisse n'est installée.");
+    }
+
+    int nbArticles = client.getNbArticles();
+    Caisse* caisseChoisie = nullptr;
+    
+    // 1. Cherche une caisse express vide/la moins pleine
+    if (nbArticles <= 10) {
+        for (auto& c : caisses) {
+            if (c.estOuverte() && c.isExpress()) {
+                if (!caisseChoisie || c.getTailleFile() < caisseChoisie->getTailleFile()) {
+                    caisseChoisie = &c;
+                }
+            }
+        }
+    }
+
+    // 2. Sinon, cherche une caisse normale
+    if (!caisseChoisie) {
+        for (auto& c : caisses) {
+            if (c.estOuverte() && !c.isExpress()) {
+                if (!caisseChoisie || c.getTailleFile() < caisseChoisie->getTailleFile()) {
+                    caisseChoisie = &c;
+                }
+            }
+        }
+    }
+
+    // 3. En dernier recours, n'importe quelle caisse ouverte
+    if (!caisseChoisie) {
+        for (auto& c : caisses) {
+            if (c.estOuverte()) {
+                if (!caisseChoisie || c.getTailleFile() < caisseChoisie->getTailleFile()) {
+                    caisseChoisie = &c;
+                }
+            }
+        }
+    }
+
+    if (caisseChoisie) {
+        caisseChoisie->ajouterClient(client);
+    } else {
+        throw std::runtime_error("Toutes les caisses sont fermées.");
+    }
+}
+
+void Supermarche::servirClient(int numeroCaisse) {
+    for (auto& c : caisses) {
+        if (c.getNumero() == numeroCaisse) {
+            c.servirClient();
+            totalClientsServis++;
+            return;
+        }
+    }
+    throw std::runtime_error("Erreur : La caisse n'existe pas.");
 }
 
 void Supermarche::ouvrirCaisse(int numero) {
@@ -25,7 +85,7 @@ void Supermarche::ouvrirCaisse(int numero) {
             return;
         }
     }
-    throw std::runtime_error("Erreur : La caisse " + std::to_string(numero) + " n'existe pas.");
+    throw std::runtime_error("Erreur : La caisse n'existe pas.");
 }
 
 void Supermarche::fermerCaisse(int numero) {
@@ -35,56 +95,28 @@ void Supermarche::fermerCaisse(int numero) {
             return;
         }
     }
-    throw std::runtime_error("Erreur : La caisse " + std::to_string(numero) + " n'existe pas.");
+    throw std::runtime_error("Erreur : La caisse n'existe pas.");
 }
 
-Caisse& Supermarche::choisirCaisse(int nbArticles) {
-    // 1. Règle Express : 10 articles ou moins 
-    if (nbArticles <= 10) {
-        for (auto& c : caisses) {
-            if (c.isExpress() && c.estOuverte()) return c;
-        }
-    }
-
-    // 2. Règle Ordinaire : Trouver la caisse la moins chargée 
-    Caisse* meilleureCaisse = nullptr;
-    int minClients = -1;
-
+void Supermarche::viderCaisse(int numero) {
     for (auto& c : caisses) {
-        if (!c.isExpress() && c.estOuverte()) {
-            if (minClients == -1 || c.getTailleFile() < minClients) {
-                minClients = c.getTailleFile();
-                meilleureCaisse = &c; // On garde un pointeur vers la meilleure caisse
-            }
-        }
-    }
-
-    if (meilleureCaisse == nullptr) {
-        throw std::runtime_error("Aucune caisse ordinaire n'est ouverte !");
-    }
-
-    return *meilleureCaisse; // On déréférence le pointeur pour renvoyer la référence
-}
-
-void Supermarche::ajouterClient(const std::string& nom, int nbArticles) {
-    Caisse& caisseCible = choisirCaisse(nbArticles);
-    Client nouveauClient(compteurId++, nom, nbArticles);
-    
-    caisseCible.ajouterClient(nouveauClient);
-    std::cout << "Le client " << nom << " a ete envoye a la caisse " << caisseCible.getNumero() << std::endl;
-}
-
-void Supermarche::servirClient(int numeroCaisse) {
-    for (auto& c : caisses) {
-        if (c.getNumero() == numeroCaisse) {
-            Client servi = c.servirClient();
-            totalServis++;
-            std::cout << "Caisse " << numeroCaisse << " a servi : " << servi.getNom() << std::endl;
+        if (c.getNumero() == numero) {
+            c.vider();
             return;
         }
     }
-    throw std::runtime_error("Erreur : La caisse " + std::to_string(numeroCaisse) + " n'existe pas.");
+    throw std::runtime_error("Erreur : La caisse n'existe pas.");
 }
 
-std::vector<Caisse>& Supermarche::getCaisses() { return caisses; }
-int Supermarche::getTotalClientsServis() const { return totalServis; }
+// --- GETTERS (C'est eux qui manquaient !) ---
+std::vector<Caisse>& Supermarche::getCaisses() {
+    return caisses;
+}
+
+int Supermarche::getTotalClientsServis() const {
+    return totalClientsServis;
+}
+
+const std::vector<Produit>& Supermarche::getCatalogue() const {
+    return catalogue;
+}

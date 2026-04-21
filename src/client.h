@@ -1,21 +1,19 @@
 #pragma once
 #include <string>
-#include <ctime>
+#include <vector>
+#include "produit.h"
 
 class Client {
+private:
+    std::string nom;
+    std::vector<Produit> panier; // <-- Le fameux panier !
+
 public:
-    Client(int id, const std::string& nom, int nbArticles);
+    Client(std::string n);
     
-    int getId() const;
+    void ajouterProduit(const Produit& p);
+    
     std::string getNom() const;
     int getNbArticles() const;
-    time_t getTempsArrivee() const;
-    
-    std::string toString() const;
-
-private:
-    int id;
-    std::string nom;
-    int nbArticles;
-    time_t tempsArrivee;
+    double getTotalFacture() const; // Nouvelle fonctionnalité !
 };

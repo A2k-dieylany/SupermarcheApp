@@ -1,16 +1,25 @@
 #include "client.h"
 
-Client::Client(int id, const std::string& nom, int nbArticles) 
-    : id(id), nom(nom), nbArticles(nbArticles), tempsArrivee(time(nullptr)) {
+Client::Client(std::string n) : nom(n) {}
+
+void Client::ajouterProduit(const Produit& p) {
+    panier.push_back(p);
 }
 
-int Client::getId() const { return id; }
-std::string Client::getNom() const { return nom; }
-int Client::getNbArticles() const { return nbArticles; }
-time_t Client::getTempsArrivee() const { return tempsArrivee; }
+std::string Client::getNom() const {
+    return nom;
+}
 
-std::string Client::toString() const {
-    return "Client #" + std::to_string(id) + " : " + nom + 
-           " (" + std::to_string(nbArticles) + " articles)";
-           
+// Le nombre d'articles est déduit dynamiquement !
+int Client::getNbArticles() const {
+    return panier.size();
+}
+
+// L'intelligence métier : on calcule la facture
+double Client::getTotalFacture() const {
+    double total = 0.0;
+    for (const auto& p : panier) {
+        total += p.getPrix();
+    }
+    return total;
 }

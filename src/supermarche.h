@@ -1,27 +1,27 @@
 #pragma once
 #include <vector>
-#include <string>
 #include "caisse.h"
+#include "produit.h"
 
 class Supermarche {
-public:
-    Supermarche();
-    
-    void initialiser(int nbCaisses); // Crée les caisses (dont 1 express)
-    void ouvrirCaisse(int numero);
-    void fermerCaisse(int numero);
-    
-    void ajouterClient(const std::string& nom, int nbArticles);
-    void servirClient(int numeroCaisse);
-    
-    std::vector<Caisse>& getCaisses();
-    int getTotalClientsServis() const;
-
 private:
     std::vector<Caisse> caisses;
-    int compteurId;  // Pour donner un ID unique à chaque client
-    int totalServis; // Statistiques globales
+    std::vector<Produit> catalogue; // Le magasin a maintenant des rayons !
+    int totalClientsServis = 0;
 
-    // Méthode privée essentielle : l'algorithme d'orientation
-    Caisse& choisirCaisse(int nbArticles); 
+public:
+    Supermarche(); // Nouveau constructeur
+    void initialiser(int nbCaisses);
+    
+    // On ne passe plus un nom et un nombre, on passe directement un objet Client complet
+    void ajouterClient(const Client& client); 
+    
+    void servirClient(int numeroCaisse);
+    void ouvrirCaisse(int numero);
+    void fermerCaisse(int numero);
+    void viderCaisse(int numero);
+
+    std::vector<Caisse>& getCaisses();
+    int getTotalClientsServis() const;
+    const std::vector<Produit>& getCatalogue() const; // Pour envoyer les produits au site web
 };
