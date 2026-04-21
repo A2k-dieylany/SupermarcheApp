@@ -1,102 +1,659 @@
-/* Base de la page */
+/* ============================================================
+   SUPERMARCHÉ DASHBOARD — ENTERPRISE LIGHT THEME
+   Fonts : Bricolage Grotesque (display) + Manrope (body)
+   Palette : Blue #2563EB · Slate · Orange accent
+   ============================================================ */
+
+/* --- VARIABLES --- */
+:root {
+    /* Bleus */
+    --blue-600:    #2563EB;
+    --blue-500:    #3B82F6;
+    --blue-400:    #60A5FA;
+    --blue-100:    #DBEAFE;
+    --blue-50:     #EFF6FF;
+
+    /* Sémantique */
+    --primary:        var(--blue-600);
+    --primary-hover:  #1D4ED8;
+    --primary-light:  var(--blue-50);
+
+    --success:        #059669;
+    --success-hover:  #047857;
+    --success-light:  #D1FAE5;
+
+    --danger:         #DC2626;
+    --danger-hover:   #B91C1C;
+    --danger-light:   #FEE2E2;
+
+    --warning:        #D97706;
+    --warning-light:  #FEF3C7;
+
+    /* Backgrounds */
+    --bg:          #F0F4FF;
+    --bg-white:    #FFFFFF;
+    --card-bg:     #FFFFFF;
+
+    /* Borders */
+    --border:      #E2E8F0;
+    --border-focus: var(--blue-500);
+
+    /* Texte */
+    --text-900:    #0F172A;
+    --text-600:    #475569;
+    --text-400:    #94A3B8;
+
+    /* Shadows */
+    --shadow-sm:   0 1px 3px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.04);
+    --shadow-md:   0 4px 12px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.04);
+    --shadow-lg:   0 12px 32px rgba(15,23,42,0.1), 0 4px 12px rgba(15,23,42,0.06);
+    --shadow-blue: 0 8px 24px rgba(37,99,235,0.22);
+}
+
+/* --- RESET --- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
 body {
-    font-family: 'Segoe UI', Arial, sans-serif;
-    background-color: #f4f6f9;
-    margin: 0;
-    color: #333;
+    font-family: 'Manrope', sans-serif;
+    background: var(--bg);
+    color: var(--text-900);
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
 }
 
+/* ============================================================
+   FOND DÉCORATIF — blobs colorés flous
+   ============================================================ */
+.bg-blobs {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+.blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.35;
+}
+.blob-1 {
+    width: 600px; height: 600px;
+    top: -200px; left: -150px;
+    background: radial-gradient(circle, #BFDBFE, #DBEAFE);
+}
+.blob-2 {
+    width: 500px; height: 500px;
+    bottom: -100px; right: -100px;
+    background: radial-gradient(circle, #C7D2FE, #E0E7FF);
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
 header {
-    background-color: #1A3A6B; /* Bleu institutionnel */
-    color: white;
-    padding: 20px;
-    text-align: center;
+    position: relative;
+    z-index: 2;
+    background: linear-gradient(135deg, var(--blue-600) 0%, #4F46E5 100%);
+    padding: 32px 24px 72px;
+    overflow: hidden;
 }
 
-/* Zone des boutons et champs de saisie */
+/* Motif géométrique en fond du header */
+header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        radial-gradient(circle at 20% 50%, rgba(255,255,255,0.07) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 40%);
+}
+header::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 0; right: 0;
+    height: 40px;
+    background: var(--bg);
+    border-radius: 24px 24px 0 0;
+}
+
+.header-inner {
+    position: relative;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.header-brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.brand-icon {
+    font-size: 2.2rem;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 16px;
+    width: 60px; height: 60px;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+    flex-shrink: 0;
+}
+
+header h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: clamp(1.5rem, 3vw, 2.1rem);
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.5px;
+    line-height: 1.15;
+}
+
+.subtitle {
+    color: rgba(255,255,255,0.72);
+    font-size: 0.875rem;
+    font-weight: 400;
+    margin-top: 3px;
+    letter-spacing: 0.01em;
+}
+
+/* Chip LIVE */
+.live-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: rgba(255,255,255,0.9);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 8px 16px;
+    border-radius: 100px;
+    backdrop-filter: blur(4px);
+}
+
+.live-dot {
+    width: 8px; height: 8px;
+    background: #34D399;
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: livePulse 2s ease-in-out infinite;
+}
+.live-dot.small { width: 6px; height: 6px; }
+
+@keyframes livePulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(52,211,153,0.5); }
+    50%       { opacity: 0.8; box-shadow: 0 0 0 5px rgba(52,211,153,0); }
+}
+
+/* ============================================================
+   MAIN
+   ============================================================ */
+main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px 60px;
+    position: relative;
+    z-index: 1;
+}
+
+/* ============================================================
+   CONTRÔLES — cartes flottantes
+   ============================================================ */
 #controles {
     display: flex;
     justify-content: center;
-    gap: 20px;
-    padding: 20px;
-    background-color: #e9ecef;
-    border-bottom: 2px solid #ccc;
+    flex-wrap: wrap;
+    gap: 18px;
+    margin-top: -48px;
+    position: relative;
+    z-index: 10;
 }
 
-.groupe-controle {
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.card-ui {
+    background: var(--card-bg);
+    padding: 22px 26px;
+    border-radius: 18px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.card-ui:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 16px 40px rgba(15,23,42,0.12), 0 4px 12px rgba(15,23,42,0.06);
+}
+
+.card-ui h3 {
+    margin: 0 0 18px;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-600);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-.groupe-controle h3 {
-    margin: 0;
-    font-size: 14px;
-    color: #555;
-    margin-right: 10px;
+.card-icon-wrap {
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.icon-blue  { background: var(--blue-50);    color: var(--primary); }
+.icon-slate { background: #F1F5F9;            color: var(--text-600); }
+
+/* ============================================================
+   INPUTS
+   ============================================================ */
+.input-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
-input, button {
-    padding: 8px 12px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 14px;
+input {
+    padding: 10px 15px;
+    background: #F8FAFC;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-900);
+    outline: none;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
 }
+input::placeholder { color: var(--text-400); font-weight: 400; }
+input:focus {
+    border-color: var(--blue-500);
+    background: var(--bg-white);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+input[type='number'] { width: 110px; }
 
+/* ============================================================
+   BOUTONS
+   ============================================================ */
 button {
-    background-color: #0056b3;
-    color: white;
+    padding: 10px 18px;
+    border-radius: 10px;
     border: none;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 600;
+    font-size: 0.88rem;
     cursor: pointer;
-    font-weight: bold;
-    transition: background-color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
 }
 
-button:hover { background-color: #004494; }
+.btn-primary {
+    background: linear-gradient(135deg, var(--blue-600), #4F46E5);
+    color: white;
+    box-shadow: var(--shadow-blue);
+}
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(37,99,235,0.32);
+    background: linear-gradient(135deg, var(--primary-hover), #4338CA);
+}
+.btn-primary:active { transform: translateY(0); }
 
-/* Zone des statistiques */
+.btn-success {
+    background: linear-gradient(135deg, var(--success), #10B981);
+    color: white;
+    box-shadow: 0 4px 14px rgba(5,150,105,0.3);
+}
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(5,150,105,0.38);
+}
+
+.btn-outline {
+    background: white;
+    border: 1.5px solid var(--border);
+    color: var(--text-600);
+    box-shadow: var(--shadow-sm);
+}
+.btn-outline:hover {
+    border-color: #CBD5E1;
+    background: #F8FAFC;
+    color: var(--text-900);
+}
+
+.btn-outline-danger {
+    background: white;
+    border: 1.5px solid #FECACA;
+    color: var(--danger);
+    box-shadow: var(--shadow-sm);
+}
+.btn-outline-danger:hover {
+    background: var(--danger-light);
+    border-color: #FCA5A5;
+}
+
+/* ============================================================
+   STAT BADGE
+   ============================================================ */
 #statistiques {
     text-align: center;
-    margin: 20px 0;
-    font-size: 1.2em;
+    margin: 44px 0 8px;
 }
 
-/* La grille des caisses (Responsive) */
+.stat-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 18px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    padding: 16px 28px;
+    border-radius: 100px;
+    box-shadow: var(--shadow-md);
+}
+
+.stat-icon-wrap {
+    font-size: 1.4rem;
+    background: var(--warning-light);
+    border-radius: 50%;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+
+.stat-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-400);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.counter {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 1.9rem;
+    line-height: 1;
+    color: var(--primary);
+    letter-spacing: -1px;
+}
+
+.stat-separator {
+    width: 1px;
+    height: 36px;
+    background: var(--border);
+    flex-shrink: 0;
+}
+
+.stat-live {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--success);
+}
+
+/* ============================================================
+   EN-TÊTE SECTION CAISSES
+   ============================================================ */
+.section-heading {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 40px 0 20px;
+}
+
+.section-heading h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-900);
+    white-space: nowrap;
+    letter-spacing: -0.2px;
+}
+
+.section-rule {
+    flex: 1;
+    height: 1.5px;
+    background: linear-gradient(90deg, var(--border), transparent);
+    border-radius: 2px;
+}
+
+/* ============================================================
+   GRILLE DES CAISSES
+   ============================================================ */
 #grille-caisses {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 20px;
-    padding: 20px;
-    max-width: 1200px;
-    margin: 0 auto;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 18px;
+    padding: 4px 0;
 }
 
-/* Le design d'une caisse (la carte) */
+/* ============================================================
+   CARTES CAISSE
+   ============================================================ */
 .carte-caisse {
-    background: white;
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    border-top: 5px solid #0056b3; /* Bleu par défaut */
-    transition: transform 0.2s;
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 22px 20px 20px;
+    border: 1px solid var(--border);
+    border-top: 4px solid var(--primary);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s;
+    box-shadow: var(--shadow-sm);
+
+    /* Animation entrée */
+    opacity: 0;
+    animation: slideUpFade 0.45s ease forwards;
 }
 
-.carte-caisse:hover { transform: translateY(-5px); }
+/* Halo subtil en haut à gauche */
+.carte-caisse::after {
+    content: '';
+    position: absolute;
+    top: -30px; left: -30px;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, rgba(37,99,235,0.05), transparent 70%);
+    pointer-events: none;
+}
 
-/* Styles spécifiques selon l'état de la caisse */
-.carte-caisse.express { border-top-color: #ff9800; } /* Orange pour l'express */
+.carte-caisse:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--border);
+    border-top-color: var(--blue-500);
+}
+
+/* EXPRESS */
+.carte-caisse.express {
+    border-top-color: var(--warning);
+}
+.carte-caisse.express::after {
+    background: radial-gradient(circle, rgba(217,119,6,0.06), transparent 70%);
+}
+.carte-caisse.express:hover {
+    border-top-color: #F59E0B;
+}
+
+/* FERMÉE */
 .carte-caisse.fermee {
-    border-top-color: #dc3545; /* Rouge pour fermée */
-    opacity: 0.6;
-    background-color: #f8d7da;
+    border-top-color: #CBD5E1;
+    opacity: 0.55;
+    filter: grayscale(40%);
+}
+.carte-caisse.fermee:hover {
+    opacity: 0.7;
+    filter: grayscale(20%);
+    transform: translateY(-3px);
 }
 
-.carte-caisse h3 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-.carte-caisse p { margin: 8px 0; font-size: 15px; }
-.statut { font-weight: bold; padding: 3px 8px; border-radius: 4px; display: inline-block;}
-.statut.ouvert { background-color: #d4edda; color: #155724; }
-.statut.ferme { background-color: #f8d7da; color: #721c24; }
+.carte-caisse h3 {
+    margin: 0 0 16px;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-900);
+    letter-spacing: -0.2px;
+}
+
+.carte-caisse p {
+    margin: 8px 0;
+    color: var(--text-600);
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    line-height: 1.4;
+}
+
+.carte-caisse strong {
+    color: var(--text-900);
+    font-weight: 700;
+}
+
+/* ============================================================
+   BADGES STATUT
+   ============================================================ */
+.statut {
+    font-size: 0.68rem;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-family: 'Manrope', sans-serif;
+}
+
+.statut.ouvert {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.statut.ferme {
+    background: var(--danger-light);
+    color: #991B1B;
+}
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes slideUpFade {
+    from { opacity: 0; transform: translateY(24px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+/* ============================================================
+   TOASTS / NOTIFICATIONS
+   ============================================================ */
+#toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 1000;
+}
+
+.toast {
+    background: var(--bg-white);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--primary);
+    padding: 14px 18px;
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    animation: slideInRight 0.38s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    min-width: 260px;
+    max-width: 360px;
+    color: var(--text-900);
+}
+
+.toast.success { border-left-color: var(--success); }
+.toast.error   { border-left-color: var(--danger); }
+
+@keyframes slideInRight {
+    from { opacity: 0; transform: translateX(110%) scale(0.92); }
+    to   { opacity: 1; transform: translateX(0)    scale(1);    }
+}
+@keyframes fadeOut {
+    to { opacity: 0; transform: translateX(110%) scale(0.92); }
+}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar          { width: 5px; }
+::-webkit-scrollbar-track    { background: var(--bg); }
+::-webkit-scrollbar-thumb    { background: #CBD5E1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+    header { padding: 24px 16px 64px; }
+
+    .header-inner { flex-direction: column; align-items: flex-start; gap: 14px; }
+    .live-chip    { align-self: flex-start; }
+
+    #controles {
+        flex-direction: column;
+        margin-top: -32px;
+    }
+
+    .card-ui { padding: 18px 16px; border-radius: 14px; }
+
+    .input-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .input-group input  { width: 100%; }
+    .input-group button { justify-content: center; }
+
+    .stat-badge {
+        padding: 14px 20px;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: center;
+        border-radius: 20px;
+    }
+    .stat-separator { display: none; }
+    .stat-live { display: none; }
+
+    #grille-caisses { grid-template-columns: 1fr; }
+
+    #toast-container { bottom: 16px; right: 16px; left: 16px; }
+    .toast { min-width: 0; width: 100%; }
+}

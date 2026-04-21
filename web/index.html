@@ -2,37 +2,100 @@
 <html lang='fr'>
 <head>
     <meta charset="UTF-8">
-    <title>Gestion Supermarché - ISI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supermarché — Dashboard Live</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel='stylesheet' href='style.css'>
 </head>
 <body>
+
+    <div class="bg-blobs" aria-hidden="true">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
     <header>
-        <h1>Supermarché - Gestion des Caisses</h1>
+        <div class="header-inner">
+            <div class="header-brand">
+                <div class="brand-icon">🛒</div>
+                <div class="brand-text">
+                    <h1>Dashboard Supermarché</h1>
+                    <p class="subtitle">Gestion des caisses en temps réel</p>
+                </div>
+            </div>
+            <div class="live-chip">
+                <span class="live-dot"></span>
+                Mise à jour automatique
+            </div>
+        </div>
     </header>
 
-    <section id='controles'>
-        <div class="groupe-controle">
-            <h3>Nouveau Client</h3>
-            <input type='text' id='nomClient' placeholder='Nom du client'>
-            <input type='number' id='nbArticles' placeholder='Nb articles' min='1' value='1'>
-            <button onclick='ajouterClient()'>Ajouter à une caisse</button>
+    <main>
+
+        <section id='controles'>
+
+            <div class="groupe-controle card-ui">
+                <h3>
+                    <span class="card-icon-wrap icon-blue">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </span>
+                    Nouveau Client
+                </h3>
+                <div class="input-group">
+                    <input type='text' id='nomClient' placeholder='Nom du client…'>
+                    <input type='number' id='nbArticles' placeholder='Articles' min='1' value='1'>
+                    <button class="btn-primary" onclick='ajouterClient()'>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                        Ajouter
+                    </button>
+                </div>
+            </div>
+
+            <div class="groupe-controle card-ui">
+                <h3>
+                    <span class="card-icon-wrap icon-slate">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                    </span>
+                    Gérer les Caisses
+                </h3>
+                <div class="input-group">
+                    <input type='number' id='numeroCaisse' placeholder='N° Caisse'>
+                    <button class="btn-success" onclick='servirClient()'>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Servir
+                    </button>
+                    <button class="btn-outline" onclick='ouvrirCaisse()'>Ouvrir</button>
+                    <button class="btn-outline-danger" onclick='fermerCaisse()'>Fermer</button>
+                </div>
+            </div>
+
+        </section>
+
+        <section id='statistiques'>
+            <div class="stat-badge">
+                <div class="stat-icon-wrap">🏆</div>
+                <div class="stat-text">
+                    <span class="stat-label">Total clients servis</span>
+                    <span id='totalServis' class="counter">0</span>
+                </div>
+                <div class="stat-separator"></div>
+                <div class="stat-live">
+                    <span class="live-dot small"></span>
+                    En direct
+                </div>
+            </div>
+        </section>
+
+        <div class="section-heading">
+            <h2>État des Caisses</h2>
+            <div class="section-rule"></div>
         </div>
 
-        <div class="groupe-controle">
-            <h3>Gérer les Caisses</h3>
-            <input type='number' id='numeroCaisse' placeholder='N° caisse'>
-            <button onclick='servirClient()'>Servir client</button>
-            <button onclick='ouvrirCaisse()'>Ouvrir</button>
-            <button onclick='fermerCaisse()'>Fermer</button>
-        </div>
-    </section>
+        <section id='grille-caisses'></section>
 
-    <section id='statistiques'>
-        <h2>Total clients servis : <span id='totalServis'>0</span></h2>
-    </section>
+    </main>
 
-    <section id='grille-caisses'></section>
-
+    <div id="toast-container"></div>
     <script src='app.js'></script>
 </body>
 </html>
