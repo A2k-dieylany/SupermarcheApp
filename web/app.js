@@ -1,5 +1,9 @@
 const API = 'http://localhost:8080/api';
 
+// --- VARIABLES GLOBALES DU PANIER (NOUVEAU) ---
+let panierCourant = []; // Stocke les identifiants (IDs) des produits
+let totalPanier = 0.0;
+
 // --- SYSTEME DE NOTIFICATIONS (TOASTS) ---
 function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
@@ -28,6 +32,11 @@ async function rafraichir() {
         
         document.getElementById('totalServis').textContent = data.totalServis;
         afficherCaisses(data.caisses);
+        
+        // NOUVEAU : Si le serveur envoie un catalogue, on crée les rayons
+        if (data.catalogue) {
+            afficherCatalogue(data.catalogue);
+        }
     } catch (erreur) {
         console.error("Impossible de joindre le serveur");
     }
@@ -61,7 +70,47 @@ function afficherCaisses(caisses) {
     });
 }
 
-// --- ACTIONS ---
+// --- NOUVEAU : GESTION DU CATALOGUE ET DU PANIER ---
+function afficherCatalogue(catalogue) {
+    const zone = document.getElementById('catalogue-rayons');
+    if (!zone) return; 
+    
+    // CORRECTION : On vérifie s'il y a déjà des boutons, pas si le texte est vide
+    if (zone.children.length > 0) return; 
+
+    // On efface les commentaires HTML invisibles
+    zone.innerHTML = ''; 
+
+    catalogue.forEach(p => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-outline';
+        // Design du bouton produit
+        btn.innerHTML = `+ ${p.nom} <span style="opacity:0.6; font-size:0.8em; margin-left:5px;">(${p.prix.toFixed(2)}€)</span>`;
+        // Action au clic : on ajoute l'ID et le prix au panier local
+        btn.onclick = () => ajouterAuPanier(p.id, p.prix);
+        zone.appendChild(btn);
+    });
+}
+
+
+function ajouterAuPanier(id, prix) {
+    panierCourant.push(id);
+    totalPanier += prix;
+    mettreAJourPanierUI();
+}
+
+function viderPanier() {
+    panierCourant = [];
+    totalPanier = 0.0;
+    mettreAJourPanierUI();
+}
+
+function mettreAJourPanierUI() {
+    document.getElementById('panier-count').textContent = panierCourant.length;
+    document.getElementById('panier-total').textContent = totalPanier.toFixed(2);
+}
+
+// --- ACTIONS VERS L'API ---
 async function envoyerAction(route, payload, msgSucces) {
     try {
         const res = await fetch(`${API}${route}`, {
@@ -72,24 +121,35 @@ async function envoyerAction(route, payload, msgSucces) {
 
         if (!res.ok) {
             const dataErreur = await res.json();
-            showToast(dataErreur.erreur, 'error'); // Affiche une belle notification rouge
+            showToast(dataErreur.erreur, 'error'); 
             return;
         }
 
-        showToast(msgSucces, 'success'); // Affiche une belle notification verte
+        showToast(msgSucces, 'success'); 
         rafraichir();
     } catch (erreur) {
         showToast("Erreur de connexion au serveur.", 'error');
     }
 }
 
+// NOUVEAU : Ajouter un client avec son panier complet
 function ajouterClient() {
     const nom = document.getElementById('nomClient').value || "Client Anonyme";
-    const nb = parseInt(document.getElementById('nbArticles').value) || 1;
-    envoyerAction('/client/ajouter', { nom: nom, nbArticles: nb }, `${nom} a été ajouté(e) avec succès !`);
+
+    // Règle métier : On ne passe pas en caisse avec un panier vide
+    if (panierCourant.length === 0) {
+        return showToast("Le panier est vide ! Ajoutez des articles d'abord.", "error");
+    }
+
+    // On envoie le JSON complexe attendu par le serveur C++
+    envoyerAction('/client/ajouter', { 
+        nom: nom, 
+        produitsIds: panierCourant 
+    }, `${nom} a rejoint une caisse (Total: ${totalPanier.toFixed(2)}€)`);
     
-    // Vide le champ nom après ajout
+    // On nettoie l'interface pour le prochain client
     document.getElementById('nomClient').value = ''; 
+    viderPanier();
 }
 
 function servirClient() {
@@ -110,5 +170,7 @@ function fermerCaisse() {
     envoyerAction('/caisse/fermer', { numero: num }, `Caisse ${num} fermée.`);
 }
 
+// Boucle de rafraîchissement toutes les 2 secondes
 setInterval(rafraichir, 2000);
 rafraichir();
+

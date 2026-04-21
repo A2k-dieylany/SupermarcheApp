@@ -24,4 +24,7 @@ public:
     std::vector<Caisse>& getCaisses();
     int getTotalClientsServis() const;
     const std::vector<Produit>& getCatalogue() const; // Pour envoyer les produits au site web
+    // Gestion de l'inventaire
+    void ajouterProduit(const Produit& p);
+    void supprimerProduit(int id);
 };

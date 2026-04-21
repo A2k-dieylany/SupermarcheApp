@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang='fr'>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administration — Supermarché</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel='stylesheet' href='style.css'>
+</head>
+<body>
+
+    <div class="bg-blobs" aria-hidden="true">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <header>
+        <div class="header-inner">
+            <div class="header-brand">
+                <div class="brand-icon" style="background: #FEF3C7; color: #D97706;">⚙️</div>
+                <div class="brand-text">
+                    <h1>Back-Office Gérant</h1>
+                    <p class="subtitle">Gestion du catalogue et des stocks</p>
+                </div>
+            </div>
+            <a href="index.html" class="btn-outline" style="background: white;">Retour aux Caisses</a>
+        </div>
+    </header>
+
+    <main>
+        <section id='controles'>
+            <div class="groupe-controle card-ui" style="flex: 1; min-width: 300px;">
+                <h3>
+                    <span class="card-icon-wrap icon-blue">📦</span>
+                    Nouveau Produit
+                </h3>
+                
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <input type='number' id='prodId' placeholder='ID Unique (ex: 6)' min="1">
+                    <input type='text' id='prodNom' placeholder='Nom (ex: Jus de pomme)'>
+                    <input type='number' id='prodPrix' placeholder='Prix en € (ex: 2.50)' step="0.01" min="0">
+                    <input type='text' id='prodCat' placeholder='Catégorie (ex: Boisson)'>
+                    
+                    <button class="btn-primary" style="width: 100%; justify-content: center;" onclick='ajouterNouveauProduit()'>
+                        Ajouter au catalogue
+                    </button>
+                </div>
+            </div>
+
+            <div class="groupe-controle card-ui" style="flex: 2; min-width: 400px;">
+                <h3>
+                    <span class="card-icon-wrap icon-slate">📋</span>
+                    Catalogue Actuel
+                </h3>
+                
+                <div id="liste-produits-admin" style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+                    </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast-container"></div>
+    <script src='admin.js'></script>
+</body>
+</html>

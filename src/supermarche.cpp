@@ -1,6 +1,7 @@
 #include "supermarche.h"
 #include <stdexcept>
 #include <iostream>
+#include <algorithm>
 
 // --- INITIALISATION ---
 Supermarche::Supermarche() {
@@ -119,4 +120,27 @@ int Supermarche::getTotalClientsServis() const {
 
 const std::vector<Produit>& Supermarche::getCatalogue() const {
     return catalogue;
+}
+
+// --- GESTION DE L'INVENTAIRE (ADMIN) ---
+void Supermarche::ajouterProduit(const Produit& p) {
+    // Vérifie si l'ID existe déjà pour éviter les doublons
+    for (const auto& prod : catalogue) {
+        if (prod.getId() == p.getId()) {
+            throw std::runtime_error("Erreur : Un produit avec cet ID existe déjà.");
+        }
+    }
+    catalogue.push_back(p);
+}
+
+void Supermarche::supprimerProduit(int id) {
+    // std::remove_if est une fonction C++ très puissante pour filtrer un tableau
+    auto it = std::remove_if(catalogue.begin(), catalogue.end(),
+        [id](const Produit& p) { return p.getId() == id; });
+        
+    if (it == catalogue.end()) {
+        throw std::runtime_error("Erreur : Produit introuvable.");
+    }
+    
+    catalogue.erase(it, catalogue.end());
 }
