@@ -2,12 +2,18 @@
 #include "../lib/httplib.h"
 #include "json_helper.h"
 #include <iostream>
+#include <mutex> // NOUVEAU : La bibliothèque pour le Thread-Safety
 
 void Serveur::demarrer(Supermarche& sm) {
     httplib::Server srv;
+    
+    // NOUVEAU : Le cadenas global de notre API
+    std::mutex api_mutex; 
 
     // 1. LECTURE : Renvoyer l'état complet du supermarché
     srv.Get("/api/etat", [&](const httplib::Request&, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(api_mutex); // VERROUILLAGE
+        
         json j = supermarcheToJson(sm);
         res.set_content(j.dump(), "application/json");
         res.set_header("Access-Control-Allow-Origin", "*");
@@ -15,14 +21,14 @@ void Serveur::demarrer(Supermarche& sm) {
 
     // 2. ACTION : Ajouter un client (AVEC PANIER)
     srv.Post("/api/client/ajouter", [&](const httplib::Request& req, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(api_mutex); // VERROUILLAGE
+        
         try {
             json body = json::parse(req.body);
             Client nouveauClient(body["nom"]);
             
-            // Le web nous envoie une liste d'IDs (ex:)
-            // On cherche chaque produit dans le catalogue pour l'ajouter au panier du client
             for (int id : body["produitsIds"]) {
-                for (const auto& p : sm.getCatalogue()) {
+                for (auto p : sm.getCatalogue()) { // Correction auto p (SQLite)
                     if (p.getId() == id) {
                         nouveauClient.ajouterProduit(p);
                         break;
@@ -30,7 +36,6 @@ void Serveur::demarrer(Supermarche& sm) {
                 }
             }
             
-            // On envoie le client complet (avec son panier) au supermarché
             sm.ajouterClient(nouveauClient);
             
             res.set_content(supermarcheToJson(sm).dump(), "application/json");
@@ -44,6 +49,8 @@ void Serveur::demarrer(Supermarche& sm) {
 
     // 3. ACTION : Servir le prochain client d'une caisse
     srv.Post("/api/caisse/servir", [&](const httplib::Request& req, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(api_mutex); // VERROUILLAGE
+        
         try {
             json body = json::parse(req.body);
             sm.servirClient(body["numero"]);
@@ -59,6 +66,8 @@ void Serveur::demarrer(Supermarche& sm) {
 
     // 4. ACTION : Ouvrir une caisse
     srv.Post("/api/caisse/ouvrir", [&](const httplib::Request& req, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(api_mutex); // VERROUILLAGE
+        
          try {
             json body = json::parse(req.body);
             sm.ouvrirCaisse(body["numero"]);
@@ -74,6 +83,8 @@ void Serveur::demarrer(Supermarche& sm) {
 
     // 5. ACTION : Fermer une caisse
     srv.Post("/api/caisse/fermer", [&](const httplib::Request& req, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(api_mutex); // VERROUILLAGE
+        
          try {
             json body = json::parse(req.body);
             sm.fermerCaisse(body["numero"]);
@@ -89,9 +100,10 @@ void Serveur::demarrer(Supermarche& sm) {
 
     // 7. ACTION ADMIN : Ajouter un produit
     srv.Post("/api/produit/ajouter", [&](const httplib::Request& req, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(api_mutex); // VERROUILLAGE
+        
         try {
             json body = json::parse(req.body);
-            // On crée le nouveau produit avec les données reçues d'internet
             Produit nouveau(body["id"], body["nom"], body["prix"], body["categorie"]);
             sm.ajouterProduit(nouveau);
             
@@ -106,6 +118,8 @@ void Serveur::demarrer(Supermarche& sm) {
 
     // 8. ACTION ADMIN : Supprimer un produit
     srv.Post("/api/produit/supprimer", [&](const httplib::Request& req, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(api_mutex); // VERROUILLAGE
+        
         try {
             json body = json::parse(req.body);
             sm.supprimerProduit(body["id"]);
@@ -122,8 +136,8 @@ void Serveur::demarrer(Supermarche& sm) {
     // Indique au serveur où trouver nos futurs fichiers HTML/JS de l'interface (Phase 3)
     srv.set_mount_point("/", "./web");
     
-
     std::cout << "Serveur demarre sur http://localhost:8080" << std::endl;
+    std::cout << "[SYSTEME] Thread-Safety actif (Mutex Lock global)" << std::endl;
     std::cout << "Appuyez sur Ctrl+C pour arreter." << std::endl;
     
     // Le serveur écoute en boucle
