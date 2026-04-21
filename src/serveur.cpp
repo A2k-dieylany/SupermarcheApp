@@ -133,6 +133,29 @@ void Serveur::demarrer(Supermarche& sm) {
         }
     });
 
+    // 9. ACTION ADMIN : Modifier le prix d'un produit en direct
+    srv.Post("/api/produit/modifier", [&](const httplib::Request& req, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(api_mutex); // Sécurité anti-crash
+        
+        try {
+            json body = json::parse(req.body);
+            
+            // --- CORRECTION : CAST EXPLICITE ---
+            // On force le C++ à comprendre exactement le type de données reçu
+            int id = body["id"].get<int>();
+            double prix = body["prix"].get<double>();
+            
+            sm.modifierPrixProduit(id, prix);
+            
+            res.set_content(supermarcheToJson(sm).dump(), "application/json");
+            res.set_header("Access-Control-Allow-Origin", "*");
+        } catch (const std::exception& e) {
+            res.status = 400;
+            res.set_content(json{{"erreur", e.what()}}.dump(), "application/json");
+            res.set_header("Access-Control-Allow-Origin", "*");
+        }
+    });
+
     // Indique au serveur où trouver nos futurs fichiers HTML/JS de l'interface (Phase 3)
     srv.set_mount_point("/", "./web");
     

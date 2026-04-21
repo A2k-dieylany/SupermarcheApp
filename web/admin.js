@@ -14,22 +14,58 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// --- CHARGEMENT DU CATALOGUE ---
+// --- CHARGEMENT DES DONNÉES ET DU DASHBOARD ---
 async function chargerCatalogue() {
     try {
-        // On réutilise la route /etat car elle contient tout le catalogue
         const res = await fetch(`${API}/etat`);
         if (!res.ok) throw new Error("Erreur serveur");
         
         const data = await res.json();
+        
+        // 1. Mise à jour du catalogue
         if (data.catalogue) {
             afficherTableauProduits(data.catalogue);
         }
+
+        // 2. Mise à jour du Dashboard Financier
+        animerCompteur('dash-clients', data.totalServis, 0); 
+        
+        const ca = data.chiffreAffaires || 0;
+        animerCompteur('dash-ca', ca, 2);
+        
+        const panierMoyen = data.totalServis > 0 ? (ca / data.totalServis) : 0;
+        animerCompteur('dash-moyen', panierMoyen, 2);
+
     } catch (erreur) {
         console.error("Erreur de connexion", erreur);
     }
 }
 
+// Fonction UX : Fait défiler les nombres de manière fluide pour le "Waouh effect"
+function animerCompteur(elementId, valeurCible, decimales) {
+    const obj = document.getElementById(elementId);
+    if (!obj) return;
+    
+    const valeurActuelle = parseFloat(obj.textContent) || 0;
+    if (valeurActuelle === valeurCible) return;
+
+    let etape = 0;
+    const maxEtapes = 20;
+    const increment = (valeurCible - valeurActuelle) / maxEtapes;
+
+    const timer = setInterval(() => {
+        etape++;
+        let valeurTemporaire = valeurActuelle + (increment * etape);
+        obj.textContent = valeurTemporaire.toFixed(decimales);
+        
+        if (etape >= maxEtapes) {
+            clearInterval(timer);
+            obj.textContent = valeurCible.toFixed(decimales); 
+        }
+    }, 20);
+}
+
+// --- NOUVEAU : AFFICHAGE DU CATALOGUE AVEC EDITION DES PRIX ---
 function afficherTableauProduits(catalogue) {
     const zone = document.getElementById('liste-produits-admin');
     if (!zone) return;
@@ -43,23 +79,31 @@ function afficherTableauProduits(catalogue) {
 
     catalogue.forEach(p => {
         const ligne = document.createElement('div');
-        // On réutilise quelques variables CSS pour faire une belle ligne
         ligne.style.cssText = `
             display: flex; justify-content: space-between; align-items: center;
-            padding: 12px 15px; background: #F8FAFC; border: 1px solid var(--border);
-            border-radius: 10px;
+            padding: 12px 15px; background: #F8FAFC; border: 1px solid var(--border, #E5E7EB);
+            border-radius: 10px; flex-wrap: wrap; gap: 10px;
         `;
         
         ligne.innerHTML = `
-            <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
-                <span style="font-weight: 800; color: var(--primary); width: 40px;">#${p.id}</span>
-                <span style="font-weight: 600; color: var(--text-900); width: 150px;">${p.nom}</span>
-                <span style="color: var(--text-600); font-size: 0.9em; width: 100px;">${p.categorie}</span>
-                <span style="font-weight: 700; width: 80px;">${p.prix.toFixed(2)} €</span>
+            <div style="display: flex; gap: 15px; align-items: center; flex: 1; min-width: 200px;">
+                <span style="font-weight: 800; color: var(--primary, #2563EB); width: 40px;">#${p.id}</span>
+                <span style="font-weight: 600; color: var(--text-900, #111827); flex: 1;">${p.nom}</span>
+                <span style="color: var(--text-600, #4B5563); font-size: 0.9em; width: 100px;">${p.categorie}</span>
             </div>
-            <button class="btn-outline-danger" style="padding: 6px 12px; font-size: 0.8rem;" onclick="supprimerProduit(${p.id})">
-                Supprimer
-            </button>
+            
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="number" id="prix-edit-${p.id}" value="${p.prix.toFixed(2)}" step="50" style="width: 100px; padding: 6px; border-radius: 5px; border: 1px solid #D1D5DB; text-align: right; font-weight: bold; color: var(--primary, #2563EB);">
+                <span style="font-weight: 700; font-size: 0.9em; width: 40px;">FCFA</span>
+                
+                <button style="padding: 6px 12px; font-size: 0.8rem; background: #10B981; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;" onclick="modifierPrix(${p.id})">
+                    Valider
+                </button>
+
+                <button class="btn-outline-danger" style="padding: 6px 12px; font-size: 0.8rem;" onclick="supprimerProduit(${p.id})">
+                    Supprimer
+                </button>
+            </div>
         `;
         zone.appendChild(ligne);
     });
@@ -114,5 +158,35 @@ function supprimerProduit(id) {
     }
 }
 
+// --- NOUVEAU : FONCTION DE MISE A JOUR DU PRIX ---
+async function modifierPrix(id) {
+    const input = document.getElementById(`prix-edit-${id}`);
+    const nouveauPrix = parseFloat(input.value);
+
+    if (isNaN(nouveauPrix) || nouveauPrix < 0) {
+        return showToast("Le prix entré est invalide.", "error");
+    }
+
+    // On utilise la route API C++ créée précédemment
+    executerActionAdmin('/produit/modifier', { 
+        id: id, prix: nouveauPrix 
+    }, `Le prix du produit #${id} a été mis à jour à ${nouveauPrix} FCFA !`);
+}
+
 // On charge le catalogue au démarrage
 chargerCatalogue();
+
+// On ajoute un rafraîchissement global (seulement les compteurs) toutes les 5 secondes
+// pour voir l'argent rentrer sans gêner la saisie des prix !
+setInterval(async () => {
+    try {
+        const res = await fetch(`${API}/etat`);
+        const data = await res.json();
+        
+        const ca = data.chiffreAffaires || 0;
+        animerCompteur('dash-clients', data.totalServis, 0); 
+        animerCompteur('dash-ca', ca, 2);
+        const panierMoyen = data.totalServis > 0 ? (ca / data.totalServis) : 0;
+        animerCompteur('dash-moyen', panierMoyen, 2);
+    } catch(e) {}
+}, 5000);

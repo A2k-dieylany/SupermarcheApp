@@ -10,16 +10,15 @@ std::string Client::getNom() const {
     return nom;
 }
 
-// Le nombre d'articles est déduit dynamiquement !
 int Client::getNbArticles() const {
     return panier.size();
 }
 
-// L'intelligence métier : on calcule la facture
+// --- NOUVEAU : LE CALCUL DE LA FACTURE ---
 double Client::getTotalFacture() const {
     double total = 0.0;
     for (const auto& p : panier) {
-        total += p.getPrix();
+        total += p.getPrix(); // Ajoute le prix de chaque produit
     }
     return total;
 }

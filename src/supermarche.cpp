@@ -7,24 +7,19 @@
 // --- INITIALISATION & PERSISTANCE (SQLITE) ---
 
 Supermarche::Supermarche() {
-    // 1. Connexion au fichier de base de données
     if (sqlite3_open("supermarche.db", &db)) {
         throw std::runtime_error("Erreur fatale : Impossible d'ouvrir la base de données !");
     }
-    
-    // 2. Création de la structure SQL
     initialiserBaseDeDonnees();
 }
 
 Supermarche::~Supermarche() {
-    // On ferme la connexion proprement pour libérer les ressources système
     sqlite3_close(db);
 }
 
 void Supermarche::initialiserBaseDeDonnees() {
     char* messageErreur = nullptr;
     
-    // Requête SQL pour créer la table des produits si elle n'existe pas
     const char* sql = 
         "CREATE TABLE IF NOT EXISTS produits ("
         "id INTEGER PRIMARY KEY, "
@@ -40,11 +35,11 @@ void Supermarche::initialiserBaseDeDonnees() {
     
     // Si la base est neuve (vide), on injecte le catalogue par défaut
     if (getCatalogue().empty()) {
-        ajouterProduit(Produit(1, "Baguette", 0.50, "Boulangerie"));
-        ajouterProduit(Produit(2, "Lait de vache", 1.20, "Frais"));
-        ajouterProduit(Produit(3, "Riz (1kg)", 2.50, "Épicerie"));
-        ajouterProduit(Produit(4, "Café moulu", 3.80, "Épicerie"));
-        ajouterProduit(Produit(5, "Savon", 1.50, "Hygiène"));
+        ajouterProduit(Produit(1, "Baguette", 150.0, "Boulangerie"));
+        ajouterProduit(Produit(2, "Lait de vache", 800.0, "Frais"));
+        ajouterProduit(Produit(3, "Riz (1kg)", 1500.0, "Épicerie"));
+        ajouterProduit(Produit(4, "Café moulu", 2500.0, "Épicerie"));
+        ajouterProduit(Produit(5, "Savon", 500.0, "Hygiène"));
     }
 }
 
@@ -63,7 +58,6 @@ void Supermarche::ajouterClient(const Client& client) {
     int nbArticles = client.getNbArticles();
     Caisse* caisseChoisie = nullptr;
     
-    // Priorité aux caisses express pour les petits paniers
     if (nbArticles <= 10) {
         for (auto& c : caisses) {
             if (c.estOuverte() && c.isExpress()) {
@@ -74,7 +68,6 @@ void Supermarche::ajouterClient(const Client& client) {
         }
     }
 
-    // Sinon, on cherche la caisse normale la moins chargée
     if (!caisseChoisie) {
         for (auto& c : caisses) {
             if (c.estOuverte() && !c.isExpress()) {
@@ -95,7 +88,14 @@ void Supermarche::ajouterClient(const Client& client) {
 void Supermarche::servirClient(int numeroCaisse) {
     for (auto& c : caisses) {
         if (c.getNumero() == numeroCaisse) {
-            c.servirClient();
+            
+            // --- NOUVEAU : LE TRANSFERT DE FONDS ---
+            // La caisse nous renvoie maintenant l'argent du client qu'elle vient de servir
+            double montantEncaisse = c.servirClient(); 
+            
+            // On sécurise l'argent dans le coffre-fort du Supermarché
+            chiffreAffairesTotal += montantEncaisse;
+            
             totalClientsServis++;
             return;
         }
@@ -173,3 +173,22 @@ void Supermarche::supprimerProduit(int id) {
 // --- GETTERS ---
 std::vector<Caisse>& Supermarche::getCaisses() { return caisses; }
 int Supermarche::getTotalClientsServis() const { return totalClientsServis; }
+
+// --- NOUVEAU : GETTER FINANCIER ---
+double Supermarche::getChiffreAffairesTotal() const { return chiffreAffairesTotal; }
+
+void Supermarche::modifierPrixProduit(int id, double nouveauPrix) {
+    // Requête SQL de type UPDATE
+    const char* sql = "UPDATE produits SET prix = ? WHERE id = ?;";
+    sqlite3_stmt* stmt;
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_double(stmt, 1, nouveauPrix);
+        sqlite3_bind_int(stmt, 2, id);
+        
+        sqlite3_step(stmt);
+        sqlite3_finalize(stmt);
+    } else {
+        throw std::runtime_error("Erreur base de données lors de la modification.");
+    }
+}

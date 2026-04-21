@@ -20,8 +20,11 @@ public:
     
     void ouvrir();
     void fermer();
-    void vider(); // <-- Elle est bien là !
+    void vider();
     
     void ajouterClient(const Client& client);
-    void servirClient();
+    
+    // --- NOUVEAU : ENCAISSEMENT ---
+    // La fonction retourne maintenant un 'double' (l'argent payé) au lieu de 'void'
+    double servirClient(); 
 };

@@ -9,6 +9,9 @@ private:
     std::vector<Caisse> caisses;
     int totalClientsServis = 0;
     
+    // --- NOUVEAU : LE COFFRE-FORT DU GÉRANT ---
+    double chiffreAffairesTotal = 0.0; 
+    
     // La connexion à la base de données SQLite
     sqlite3* db; 
 
@@ -29,11 +32,13 @@ public:
 
     std::vector<Caisse>& getCaisses();
     int getTotalClientsServis() const;
+    
+    // --- NOUVEAU : GETTER FINANCIER ---
+    double getChiffreAffairesTotal() const; 
 
     // --- GESTION DU CATALOGUE (SQLITE) ---
-    // Note : on retourne un vecteur par valeur car il est extrait de la BDD
     std::vector<Produit> getCatalogue(); 
-    
     void ajouterProduit(const Produit& p);
     void supprimerProduit(int id);
+    void modifierPrixProduit(int id, double nouveauPrix);
 };

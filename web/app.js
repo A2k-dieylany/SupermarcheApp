@@ -1,7 +1,8 @@
 const API = 'http://localhost:8080/api';
 
-// --- VARIABLES GLOBALES DU PANIER (NOUVEAU) ---
-let panierCourant = []; // Stocke les identifiants (IDs) des produits
+// --- VARIABLES GLOBALES DU PANIER ---
+// On stocke des objets complets pour le ticket de caisse
+let panierCourant = []; 
 let totalPanier = 0.0;
 
 // --- SYSTEME DE NOTIFICATIONS (TOASTS) ---
@@ -15,7 +16,6 @@ function showToast(message, type = 'success') {
     
     container.appendChild(toast);
 
-    // Détruit la notification après 3 secondes
     setTimeout(() => {
         toast.style.animation = 'fadeOut 0.3s ease forwards';
         setTimeout(() => toast.remove(), 300);
@@ -33,7 +33,6 @@ async function rafraichir() {
         document.getElementById('totalServis').textContent = data.totalServis;
         afficherCaisses(data.caisses);
         
-        // NOUVEAU : Si le serveur envoie un catalogue, on crée les rayons
         if (data.catalogue) {
             afficherCatalogue(data.catalogue);
         }
@@ -49,8 +48,6 @@ function afficherCaisses(caisses) {
     caisses.forEach((c, index) => {
         const carte = document.createElement('div');
         carte.className = 'carte-caisse';
-        
-        // Délai d'animation en cascade pour un effet stylé
         carte.style.animationDelay = `${index * 0.1}s`;
 
         if (c.express) carte.classList.add('express');
@@ -70,31 +67,55 @@ function afficherCaisses(caisses) {
     });
 }
 
-// --- NOUVEAU : GESTION DU CATALOGUE ET DU PANIER ---
+// --- LE RETOUR DES EMOJIS (CHOIX DE L'ARCHITECTE) ---
+function getIconeCategorie(categorie) {
+    const icones = {
+        'Boulangerie': '🥖',
+        'Frais': '🥛',
+        'Épicerie': '🥫',
+        'Hygiène': '🧼',
+        'Surgelé': '❄️',
+        'Boisson': '🥤',
+        'Fruits': '🍎',
+        'Légumes': '🥦'
+    };
+    return icones[categorie] || '📦'; 
+}
+
 function afficherCatalogue(catalogue) {
     const zone = document.getElementById('catalogue-rayons');
-    if (!zone) return; 
-    
-    // CORRECTION : On vérifie s'il y a déjà des boutons, pas si le texte est vide
-    if (zone.children.length > 0) return; 
+    if (!zone || zone.children.length > 0) return; 
 
-    // On efface les commentaires HTML invisibles
     zone.innerHTML = ''; 
 
     catalogue.forEach(p => {
-        const btn = document.createElement('button');
-        btn.className = 'btn-outline';
-        // Design du bouton produit
-        btn.innerHTML = `+ ${p.nom} <span style="opacity:0.6; font-size:0.8em; margin-left:5px;">(${p.prix.toFixed(2)}€)</span>`;
-        // Action au clic : on ajoute l'ID et le prix au panier local
-        btn.onclick = () => ajouterAuPanier(p.id, p.prix);
-        zone.appendChild(btn);
+        const card = document.createElement('div');
+        card.className = 'produit-card';
+        
+        const icone = getIconeCategorie(p.categorie);
+        
+        // MODIFICATION : Affichage en FCFA
+        card.innerHTML = `
+            <div class="produit-icon">${icone}</div>
+            <div class="produit-nom">${p.nom}</div>
+            <div class="produit-prix">${p.prix.toFixed(2)} FCFA</div>
+        `;
+        
+        // MODIFICATION : On envoie l'ID, le NOM (pour le ticket) et le PRIX
+        card.onclick = () => {
+            ajouterAuPanier(p.id, p.nom, p.prix);
+            card.style.transform = 'scale(0.9)';
+            setTimeout(() => card.style.transform = '', 100);
+        };
+        
+        zone.appendChild(card);
     });
 }
 
-
-function ajouterAuPanier(id, prix) {
-    panierCourant.push(id);
+// --- LOGIQUE PANIER ---
+function ajouterAuPanier(id, nom, prix) {
+    // Le panier retient le nom pour pouvoir l'imprimer
+    panierCourant.push({ id: id, nom: nom, prix: prix });
     totalPanier += prix;
     mettreAJourPanierUI();
 }
@@ -107,6 +128,7 @@ function viderPanier() {
 
 function mettreAJourPanierUI() {
     document.getElementById('panier-count').textContent = panierCourant.length;
+    // MODIFICATION : FCFA sur le HTML (si tu as mis la devise en dur dans le HTML, pense à la changer là aussi !)
     document.getElementById('panier-total').textContent = totalPanier.toFixed(2);
 }
 
@@ -132,22 +154,26 @@ async function envoyerAction(route, payload, msgSucces) {
     }
 }
 
-// NOUVEAU : Ajouter un client avec son panier complet
+// --- INTEGRATION DU TICKET DE CAISSE LORS DE L'AJOUT ---
 function ajouterClient() {
     const nom = document.getElementById('nomClient').value || "Client Anonyme";
 
-    // Règle métier : On ne passe pas en caisse avec un panier vide
     if (panierCourant.length === 0) {
         return showToast("Le panier est vide ! Ajoutez des articles d'abord.", "error");
     }
 
-    // On envoie le JSON complexe attendu par le serveur C++
+    // Le serveur C++ n'attend que des IDs
+    const idsPourServeur = panierCourant.map(produit => produit.id);
+
+    // On envoie au serveur
     envoyerAction('/client/ajouter', { 
         nom: nom, 
-        produitsIds: panierCourant 
-    }, `${nom} a rejoint une caisse (Total: ${totalPanier.toFixed(2)}€)`);
+        produitsIds: idsPourServeur 
+    }, `${nom} a rejoint une caisse.`);
     
-    // On nettoie l'interface pour le prochain client
+    // ON LANCE L'IMPRESSION DU TICKET !
+    imprimerTicket(nom, panierCourant, totalPanier);
+    
     document.getElementById('nomClient').value = ''; 
     viderPanier();
 }
@@ -170,7 +196,34 @@ function fermerCaisse() {
     envoyerAction('/caisse/fermer', { numero: num }, `Caisse ${num} fermée.`);
 }
 
-// Boucle de rafraîchissement toutes les 2 secondes
+// --- LE MOTEUR D'IMPRESSION DU TICKET EN FCFA ---
+function imprimerTicket(nomClient, listeProduits, total) {
+    const ticketModal = document.getElementById('ticket-modal');
+    const lignesZone = document.getElementById('ticket-lignes');
+    
+    if (!ticketModal || !lignesZone) return; 
+    
+    lignesZone.innerHTML = '';
+    lignesZone.innerHTML += `<div style="text-align: center; margin-bottom: 10px; color: #666;">Client : ${nomClient}</div>`;
+
+    listeProduits.forEach(p => {
+        lignesZone.innerHTML += `
+            <div class="ticket-item">
+                <span>1x ${p.nom}</span>
+                <span>${p.prix.toFixed(2)} FCFA</span>
+            </div>
+        `;
+    });
+
+    // Affichage du Total en FCFA
+    document.getElementById('ticket-total-prix').textContent = `${total.toFixed(2)} FCFA`;
+
+    ticketModal.classList.add('visible');
+
+    setTimeout(() => {
+        ticketModal.classList.remove('visible');
+    }, 4000); // Disparaît après 4 secondes
+}
+
 setInterval(rafraichir, 2000);
 rafraichir();
-

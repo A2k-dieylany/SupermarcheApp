@@ -54,7 +54,7 @@
                     </div>
 
                 <div class="panier-resume" style="font-weight: 700; color: var(--primary); display: flex; align-items: center; justify-content: space-between; background: var(--blue-50); padding: 10px 15px; border-radius: 10px;">
-                    <span>🛒 Panier : <span id="panier-count">0</span> article(s) &nbsp;|&nbsp; Total : <span id="panier-total">0.00</span> €</span>
+                    <span>🛒 Panier : <span id="panier-count">0</span> article(s) &nbsp;|&nbsp; Total : <span id="panier-total">0.00</span> FCFA</span>
                     <button class="btn-outline-danger" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px;" onclick="viderPanier()">Vider le panier</button>
                 </div>
             </div>
@@ -105,5 +105,17 @@
 
     <div id="toast-container"></div>
     <script src='app.js?v=3'></script>
+
+    <div id="ticket-modal">
+        <div class="ticket-header">
+            <h2>SEN SUPERMARCHÉ</h2>
+            <p>Merci pour votre visite !</p>
+        </div>
+        <div id="ticket-lignes"></div>
+        <div class="ticket-total">
+            <span>TOTAL:</span>
+            <span id="ticket-total-prix">0.00 FCFA</span>
+        </div>
+    </div>
 </body>
 </html>

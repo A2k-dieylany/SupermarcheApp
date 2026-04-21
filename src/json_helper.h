@@ -30,15 +30,17 @@ inline json supermarcheToJson(Supermarche& sm) {
     json j;
     j["totalServis"] = sm.getTotalClientsServis();
     
+    // --- LE CORRECTIF EST ICI ---
+    // On oblige l'API à envoyer l'argent au format JSON !
+    j["chiffreAffaires"] = sm.getChiffreAffairesTotal();
+    
     j["caisses"] = json::array();
     for (const auto& c : sm.getCaisses()) {
         j["caisses"].push_back(caisseToJson(c));
     }
     
     j["catalogue"] = json::array();
-    
-    // CORRECTION : On utilise "auto p" au lieu de "const auto& p" 
-    // car getCatalogue() génère un vecteur tout neuf depuis la BDD SQLite.
+    // Utilisation de auto p car on interroge la base SQLite
     for (auto p : sm.getCatalogue()) {
         j["catalogue"].push_back(produitToJson(p));
     }
