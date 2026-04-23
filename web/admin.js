@@ -14,34 +14,7 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// --- CHARGEMENT DES DONNÉES ET DU DASHBOARD ---
-async function chargerCatalogue() {
-    try {
-        const res = await fetch(`${API}/etat`);
-        if (!res.ok) throw new Error("Erreur serveur");
-        
-        const data = await res.json();
-        
-        // 1. Mise à jour du catalogue
-        if (data.catalogue) {
-            afficherTableauProduits(data.catalogue);
-        }
-
-        // 2. Mise à jour du Dashboard Financier
-        animerCompteur('dash-clients', data.totalServis, 0); 
-        
-        const ca = data.chiffreAffaires || 0;
-        animerCompteur('dash-ca', ca, 2);
-        
-        const panierMoyen = data.totalServis > 0 ? (ca / data.totalServis) : 0;
-        animerCompteur('dash-moyen', panierMoyen, 2);
-
-    } catch (erreur) {
-        console.error("Erreur de connexion", erreur);
-    }
-}
-
-// Fonction UX : Fait défiler les nombres de manière fluide pour le "Waouh effect"
+// --- ANIMATION DES COMPTEURS ---
 function animerCompteur(elementId, valeurCible, decimales) {
     const obj = document.getElementById(elementId);
     if (!obj) return;
@@ -65,12 +38,35 @@ function animerCompteur(elementId, valeurCible, decimales) {
     }, 20);
 }
 
-// --- NOUVEAU : AFFICHAGE DU CATALOGUE AVEC EDITION DES PRIX ---
+// ==========================================
+// PARTIE 1 : GESTION DU CATALOGUE (TON CODE)
+// ==========================================
+
+async function chargerCatalogue() {
+    try {
+        const res = await fetch(`${API}/etat`);
+        if (!res.ok) throw new Error("Erreur serveur");
+        const data = await res.json();
+        
+        if (data.catalogue) {
+            afficherTableauProduits(data.catalogue);
+        }
+
+        const ca = data.chiffreAffaires || 0;
+        animerCompteur('dash-clients', data.totalServis, 0); 
+        animerCompteur('dash-ca', ca, 2);
+        const panierMoyen = data.totalServis > 0 ? (ca / data.totalServis) : 0;
+        animerCompteur('dash-moyen', panierMoyen, 2);
+    } catch (erreur) {
+        console.error("Erreur de connexion", erreur);
+    }
+}
+
 function afficherTableauProduits(catalogue) {
     const zone = document.getElementById('liste-produits-admin');
     if (!zone) return;
     
-    zone.innerHTML = ''; // On vide avant de redessiner
+    zone.innerHTML = ''; 
 
     if (catalogue.length === 0) {
         zone.innerHTML = `<p style="color: var(--text-400);">Le catalogue est vide.</p>`;
@@ -82,7 +78,7 @@ function afficherTableauProduits(catalogue) {
         ligne.style.cssText = `
             display: flex; justify-content: space-between; align-items: center;
             padding: 12px 15px; background: #F8FAFC; border: 1px solid var(--border, #E5E7EB);
-            border-radius: 10px; flex-wrap: wrap; gap: 10px;
+            border-radius: 10px; flex-wrap: wrap; gap: 10px; margin-bottom: 8px;
         `;
         
         ligne.innerHTML = `
@@ -100,7 +96,7 @@ function afficherTableauProduits(catalogue) {
                     Valider
                 </button>
 
-                <button class="btn-outline-danger" style="padding: 6px 12px; font-size: 0.8rem;" onclick="supprimerProduit(${p.id})">
+                <button class="btn-outline-danger" style="padding: 6px 12px; font-size: 0.8rem; border: 1px solid #EF4444; color: #EF4444; background: transparent; border-radius: 5px; cursor: pointer;" onclick="supprimerProduit(${p.id})">
                     Supprimer
                 </button>
             </div>
@@ -109,7 +105,6 @@ function afficherTableauProduits(catalogue) {
     });
 }
 
-// --- ACTIONS ADMINISTRATEUR ---
 async function executerActionAdmin(route, payload, msgSucces) {
     try {
         const res = await fetch(`${API}${route}`, {
@@ -125,7 +120,7 @@ async function executerActionAdmin(route, payload, msgSucces) {
         }
 
         showToast(msgSucces, 'success');
-        chargerCatalogue(); // On rafraîchit la liste immédiatement après l'action
+        chargerCatalogue(); 
     } catch (erreur) {
         showToast("Erreur de connexion au serveur.", 'error');
     }
@@ -141,11 +136,8 @@ function ajouterNouveauProduit() {
         return showToast("Veuillez remplir tous les champs correctement.", "error");
     }
 
-    executerActionAdmin('/produit/ajouter', { 
-        id: id, nom: nom, prix: prix, categorie: categorie 
-    }, `Le produit ${nom} a été ajouté au catalogue !`);
+    executerActionAdmin('/produit/ajouter', { id: id, nom: nom, prix: prix, categorie: categorie }, `Le produit ${nom} a été ajouté !`);
 
-    // On vide le formulaire
     document.getElementById('prodId').value = '';
     document.getElementById('prodNom').value = '';
     document.getElementById('prodPrix').value = '';
@@ -158,7 +150,6 @@ function supprimerProduit(id) {
     }
 }
 
-// --- NOUVEAU : FONCTION DE MISE A JOUR DU PRIX ---
 async function modifierPrix(id) {
     const input = document.getElementById(`prix-edit-${id}`);
     const nouveauPrix = parseFloat(input.value);
@@ -167,18 +158,87 @@ async function modifierPrix(id) {
         return showToast("Le prix entré est invalide.", "error");
     }
 
-    // On utilise la route API C++ créée précédemment
-    executerActionAdmin('/produit/modifier', { 
-        id: id, prix: nouveauPrix 
-    }, `Le prix du produit #${id} a été mis à jour à ${nouveauPrix} FCFA !`);
+    executerActionAdmin('/produit/modifier', { id: id, prix: nouveauPrix }, `Le prix du produit #${id} a été mis à jour à ${nouveauPrix} FCFA !`);
 }
 
-// On charge le catalogue au démarrage
-chargerCatalogue();
 
-// On ajoute un rafraîchissement global (seulement les compteurs) toutes les 5 secondes
-// pour voir l'argent rentrer sans gêner la saisie des prix !
-setInterval(async () => {
+// ==========================================
+// PARTIE 2 : TEMPS RÉEL (GRAPHIQUE & HISTORIQUE)
+// ==========================================
+
+let caChartInstance = null;
+const historiqueTemps = [];
+const historiqueCA = [];
+
+function initialiserGraphique() {
+    const ctx = document.getElementById('caChart');
+    if (!ctx) return;
+
+    caChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: historiqueTemps,
+            datasets: [{
+                label: "Chiffre d'Affaires (FCFA)",
+                data: historiqueCA,
+                borderColor: '#10B981',
+                backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                borderWidth: 3,
+                pointBackgroundColor: '#059669',
+                pointRadius: 4,
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 0 },
+            scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+}
+
+// Fonction propre et isolée pour l'historique
+async function chargerHistorique() {
+    try {
+        const res = await fetch(`${API}/historique`);
+        const tickets = await res.json();
+        
+        const zone = document.getElementById('liste-historique');
+        if (!zone) return;
+        
+        zone.innerHTML = '';
+        
+        if (tickets.length === 0) {
+            zone.innerHTML = `<p style="color: #9CA3AF; font-style: italic;">Aucune vente enregistrée pour le moment.</p>`;
+            return;
+        }
+
+        tickets.forEach(t => {
+            zone.innerHTML += `
+                <div style="display: flex; justify-content: space-between; padding: 10px; background: #F3F4F6; border-radius: 8px; font-size: 0.9em; margin-bottom: 5px;">
+                    <div>
+                        <span style="color: #6B7280; margin-right: 15px;">🕒 ${t.date}</span>
+                        <span style="font-weight: 600; color: #1F2937;">${t.client}</span>
+                    </div>
+                    <div style="font-weight: 800; color: #10B981;">
+                        + ${t.total.toFixed(2)} FCFA
+                    </div>
+                </div>
+            `;
+        });
+    } catch (e) { 
+        console.error("Erreur historique", e); 
+    }
+}
+
+// La boucle qui tourne toutes les 3 secondes sans casser la saisie dans le catalogue
+async function boucleSurveillanceTempsReel() {
     try {
         const res = await fetch(`${API}/etat`);
         const data = await res.json();
@@ -188,5 +248,37 @@ setInterval(async () => {
         animerCompteur('dash-ca', ca, 2);
         const panierMoyen = data.totalServis > 0 ? (ca / data.totalServis) : 0;
         animerCompteur('dash-moyen', panierMoyen, 2);
-    } catch(e) {}
-}, 5000);
+
+        if (caChartInstance) {
+            const now = new Date();
+            const heure = now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0') + ':' + String(now.getSeconds()).padStart(2, '0');
+
+            historiqueTemps.push(heure);
+            historiqueCA.push(ca);
+
+            if (historiqueTemps.length > 15) {
+                historiqueTemps.shift();
+                historiqueCA.shift();
+            }
+            caChartInstance.update();
+        }
+
+        // On actualise l'historique
+        chargerHistorique();
+
+    } catch(e) {
+        console.error("Erreur boucle temps réel:", e);
+    }
+}
+
+// ==========================================
+// DÉMARRAGE DE LA PAGE
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+    chargerCatalogue();      // Charge les produits modifiables
+    initialiserGraphique();  // Prépare le graphique
+    chargerHistorique();     // Charge la liste des tickets
+    
+    // Lance l'actualisation financière toutes les 3 secondes
+    setInterval(boucleSurveillanceTempsReel, 3000); 
+});

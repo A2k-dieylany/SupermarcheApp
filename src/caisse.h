@@ -19,7 +19,7 @@ public:
     int getTempsAttente() const;
     
     void ouvrir();
-    void fermer();
+    std::queue<Client> fermer();
     void vider();
     
     void ajouterClient(const Client& client);

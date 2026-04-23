@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Administration — Supermarché</title>
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <link rel='stylesheet' href='style.css'>
 </head>
 <body>
@@ -50,8 +52,27 @@
                     🛒 <span id="dash-moyen">0.00</span> FCFA
                 </div>
             </div>
+
+            <div class="card-ui" style="flex: 100%; margin-top: 10px; background: white; padding: 20px; border: none; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
+                <h3 style="margin-top: 0; margin-bottom: 15px; color: #374151; font-size: 1.1em; display: flex; align-items: center; gap: 8px;">
+                    📈 Évolution du Chiffre d'Affaires
+                </h3>
+                <div style="position: relative; height: 250px; width: 100%;">
+                    <canvas id="caChart"></canvas>
+                </div>
+            </div>
             
         </section>
+
+        <section id="historique-ventes" style="margin-bottom: 30px;">
+            <div class="card-ui" style="background: white; padding: 20px; border: none; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
+                <h3 style="margin-top: 0; color: #374151;">🧾 Historique des Encaissements</h3>
+                
+                <div id="liste-historique" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
+                </div>
+            </div>
+        </section>
+
         <section id='controles'>
             <div class="groupe-controle card-ui" style="flex: 1; min-width: 300px;">
                 <h3>
@@ -78,7 +99,7 @@
                 </h3>
                 
                 <div id="liste-produits-admin" style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
-                    </div>
+                </div>
             </div>
         </section>
     </main>

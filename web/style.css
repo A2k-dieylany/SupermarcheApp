@@ -542,3 +542,18 @@ button {
     display: flex;
     justify-content: space-between;
 }
+
+.carte-caisse.surcharge {
+    border: 3px solid #EF4444 !important;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+    animation: pulse-rouge 1.5s infinite alternate;
+    
+    /* --- LE CORRECTIF --- */
+    opacity: 1 !important; 
+    visibility: visible !important;
+}
+
+@keyframes pulse-rouge {
+    from { transform: scale(1); opacity: 1; }
+    to { transform: scale(1.02); background-color: #FEF2F2; opacity: 1; }
+}

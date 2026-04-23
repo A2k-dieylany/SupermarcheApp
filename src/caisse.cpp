@@ -16,13 +16,17 @@ int Caisse::getTempsAttente() const {
 
 void Caisse::ouvrir() { ouverte = true; }
 
-void Caisse::fermer() {
-    if (!file.empty()) {
-        throw std::runtime_error("Impossible de fermer : il y a encore des clients !");
-    }
-    ouverte = false;
+std::queue<Client> Caisse::fermer() {
+    ouverte = false; // On ferme la caisse
+    
+    std::queue<Client> clientsOrphelins;
+    
+    // std::swap est une astuce C++ ultra-rapide pour échanger deux variables
+    // Ici, on vide "file" et on met tous les clients dans "clientsOrphelins"
+    std::swap(file, clientsOrphelins); 
+    
+    return clientsOrphelins; // On renvoie les clients au supermarché
 }
-
 void Caisse::vider() {
     std::queue<Client> fileVide;
     std::swap(file, fileVide);

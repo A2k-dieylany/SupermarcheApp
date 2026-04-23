@@ -1,41 +1,34 @@
 const API = 'http://localhost:8080/api';
 
-// --- VARIABLES GLOBALES DU PANIER ---
-// On stocke des objets complets pour le ticket de caisse
+// --- VARIABLES GLOBALES ---
 let panierCourant = []; 
 let totalPanier = 0.0;
+let intervalSimulation = null; // Variable pour retenir l'état de la simulation
 
-// --- SYSTEME DE NOTIFICATIONS (TOASTS) ---
+// --- SYSTEME DE NOTIFICATIONS ---
 function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    
     const icon = type === 'success' ? '✅' : '❌';
     toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
-    
     container.appendChild(toast);
-
     setTimeout(() => {
         toast.style.animation = 'fadeOut 0.3s ease forwards';
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
 
-// --- LOGIQUE PRINCIPALE ---
+// --- RAFRAICHISSEMENT GENERAL ---
 async function rafraichir() {
     try {
         const res = await fetch(`${API}/etat`);
         if (!res.ok) throw new Error("Erreur serveur");
-        
         const data = await res.json();
         
         document.getElementById('totalServis').textContent = data.totalServis;
         afficherCaisses(data.caisses);
-        
-        if (data.catalogue) {
-            afficherCatalogue(data.catalogue);
-        }
+        if (data.catalogue) afficherCatalogue(data.catalogue);
     } catch (erreur) {
         console.error("Impossible de joindre le serveur");
     }
@@ -52,6 +45,7 @@ function afficherCaisses(caisses) {
 
         if (c.express) carte.classList.add('express');
         if (!c.ouverte) carte.classList.add('fermee');
+        if (c.nbClients >= 5) carte.classList.add('surcharge');
 
         const statutTexte = c.ouverte ? 'Ouverte' : 'Fermée';
         const statutClasse = c.ouverte ? 'ouvert' : 'ferme';
@@ -67,54 +61,38 @@ function afficherCaisses(caisses) {
     });
 }
 
-// --- LE RETOUR DES EMOJIS (CHOIX DE L'ARCHITECTE) ---
+// --- CATALOGUE ET PANIER ---
 function getIconeCategorie(categorie) {
-    const icones = {
-        'Boulangerie': '🥖',
-        'Frais': '🥛',
-        'Épicerie': '🥫',
-        'Hygiène': '🧼',
-        'Surgelé': '❄️',
-        'Boisson': '🥤',
-        'Fruits': '🍎',
-        'Légumes': '🥦'
-    };
+    const icones = { 'Boulangerie': '🥖', 'Frais': '🥛', 'Épicerie': '🥫', 'Hygiène': '🧼', 'Surgelé': '❄️', 'Boisson': '🥤', 'Fruits': '🍎', 'Légumes': '🥦' };
     return icones[categorie] || '📦'; 
 }
 
 function afficherCatalogue(catalogue) {
     const zone = document.getElementById('catalogue-rayons');
     if (!zone || zone.children.length > 0) return; 
-
     zone.innerHTML = ''; 
 
     catalogue.forEach(p => {
         const card = document.createElement('div');
         card.className = 'produit-card';
-        
         const icone = getIconeCategorie(p.categorie);
         
-        // MODIFICATION : Affichage en FCFA
         card.innerHTML = `
             <div class="produit-icon">${icone}</div>
             <div class="produit-nom">${p.nom}</div>
             <div class="produit-prix">${p.prix.toFixed(2)} FCFA</div>
         `;
         
-        // MODIFICATION : On envoie l'ID, le NOM (pour le ticket) et le PRIX
         card.onclick = () => {
             ajouterAuPanier(p.id, p.nom, p.prix);
             card.style.transform = 'scale(0.9)';
             setTimeout(() => card.style.transform = '', 100);
         };
-        
         zone.appendChild(card);
     });
 }
 
-// --- LOGIQUE PANIER ---
 function ajouterAuPanier(id, nom, prix) {
-    // Le panier retient le nom pour pouvoir l'imprimer
     panierCourant.push({ id: id, nom: nom, prix: prix });
     totalPanier += prix;
     mettreAJourPanierUI();
@@ -128,7 +106,6 @@ function viderPanier() {
 
 function mettreAJourPanierUI() {
     document.getElementById('panier-count').textContent = panierCourant.length;
-    // MODIFICATION : FCFA sur le HTML (si tu as mis la devise en dur dans le HTML, pense à la changer là aussi !)
     document.getElementById('panier-total').textContent = totalPanier.toFixed(2);
 }
 
@@ -144,38 +121,31 @@ async function envoyerAction(route, payload, msgSucces) {
         if (!res.ok) {
             const dataErreur = await res.json();
             showToast(dataErreur.erreur, 'error'); 
-            return;
+            return false; 
         }
 
-        showToast(msgSucces, 'success'); 
+        if (msgSucces) showToast(msgSucces, 'success'); 
         rafraichir();
+        return true; 
     } catch (erreur) {
         showToast("Erreur de connexion au serveur.", 'error');
+        return false;
     }
 }
 
-// --- INTEGRATION DU TICKET DE CAISSE LORS DE L'AJOUT ---
-function ajouterClient() {
+// --- ACTIONS DES CAISSES ---
+async function ajouterClient() {
     const nom = document.getElementById('nomClient').value || "Client Anonyme";
+    if (panierCourant.length === 0) return showToast("Le panier est vide ! Ajoutez des articles d'abord.", "error");
 
-    if (panierCourant.length === 0) {
-        return showToast("Le panier est vide ! Ajoutez des articles d'abord.", "error");
-    }
-
-    // Le serveur C++ n'attend que des IDs
     const idsPourServeur = panierCourant.map(produit => produit.id);
-
-    // On envoie au serveur
-    envoyerAction('/client/ajouter', { 
-        nom: nom, 
-        produitsIds: idsPourServeur 
-    }, `${nom} a rejoint une caisse.`);
+    const succes = await envoyerAction('/client/ajouter', { nom: nom, produitsIds: idsPourServeur }, `${nom} a rejoint une caisse.`);
     
-    // ON LANCE L'IMPRESSION DU TICKET !
-    imprimerTicket(nom, panierCourant, totalPanier);
-    
-    document.getElementById('nomClient').value = ''; 
-    viderPanier();
+    if (succes) {
+        imprimerTicket(nom, panierCourant, totalPanier);
+        document.getElementById('nomClient').value = ''; 
+        viderPanier();
+    }
 }
 
 function servirClient() {
@@ -193,37 +163,89 @@ function ouvrirCaisse() {
 function fermerCaisse() {
     const num = parseInt(document.getElementById('numeroCaisse').value);
     if (!num) return showToast("Veuillez entrer un numéro de caisse", 'error');
-    envoyerAction('/caisse/fermer', { numero: num }, `Caisse ${num} fermée.`);
+    envoyerAction('/caisse/fermer', { numero: num }, null); // Pas de message de succès forcé ici
 }
-
-// --- LE MOTEUR D'IMPRESSION DU TICKET EN FCFA ---
 function imprimerTicket(nomClient, listeProduits, total) {
     const ticketModal = document.getElementById('ticket-modal');
     const lignesZone = document.getElementById('ticket-lignes');
-    
     if (!ticketModal || !lignesZone) return; 
     
-    lignesZone.innerHTML = '';
-    lignesZone.innerHTML += `<div style="text-align: center; margin-bottom: 10px; color: #666;">Client : ${nomClient}</div>`;
-
+    lignesZone.innerHTML = `<div style="text-align: center; margin-bottom: 10px; color: #666;">Client : ${nomClient}</div>`;
     listeProduits.forEach(p => {
-        lignesZone.innerHTML += `
-            <div class="ticket-item">
-                <span>1x ${p.nom}</span>
-                <span>${p.prix.toFixed(2)} FCFA</span>
-            </div>
-        `;
+        lignesZone.innerHTML += `<div class="ticket-item"><span>1x ${p.nom}</span><span>${p.prix.toFixed(2)} FCFA</span></div>`;
+    });
+    document.getElementById('ticket-total-prix').textContent = `${total.toFixed(2)} FCFA`;
+    ticketModal.classList.add('visible');
+    
+    // --- LA LIGNE MAGIQUE QUI MANQUAIT ---
+    // On envoie discrètement le ticket au serveur C++ pour la comptabilité
+    fetch(`${API}/historique/ajouter`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client: nomClient, total: total })
     });
 
-    // Affichage du Total en FCFA
-    document.getElementById('ticket-total-prix').textContent = `${total.toFixed(2)} FCFA`;
-
-    ticketModal.classList.add('visible');
-
-    setTimeout(() => {
-        ticketModal.classList.remove('visible');
-    }, 4000); // Disparaît après 4 secondes
+    setTimeout(() => ticketModal.classList.remove('visible'), 4000); 
+}
+// --- BONUS : MOTEUR DE SIMULATION IA ---
+function toggleSimulation() {
+    const btn = document.getElementById('btn-simu');
+    
+    if (intervalSimulation) {
+        clearInterval(intervalSimulation);
+        intervalSimulation = null;
+        btn.innerHTML = "🤖 Activer Simulation";
+        btn.style.background = "transparent";
+        btn.style.color = "#8B5CF6";
+        showToast("Simulation arrêtée", "success");
+    } else {
+        btn.innerHTML = "🛑 Stopper Simulation";
+        btn.style.background = "#8B5CF6";
+        btn.style.color = "white";
+        showToast("Mode Autopilot activé !", "success");
+        
+        intervalSimulation = setInterval(() => {
+            if (Math.random() > 0.3) {
+                genererClientAleatoire();
+            } else {
+                servirClientAutomatique(); 
+            }
+        }, 2000); 
+    }
 }
 
+function genererClientAleatoire() {
+    const prenoms = ["Djily", "Awa", "Moussa", "Fatou", "Cheikh", "Ndeye", "Amadou"];
+    const nomAleatoire = prenoms[Math.floor(Math.random() * prenoms.length)];
+    const nbProduits = Math.floor(Math.random() * 4) + 1;
+    const itemsPossibles = document.querySelectorAll('.produit-card');
+    
+    if (itemsPossibles.length === 0) return; 
+
+    for(let i = 0; i < nbProduits; i++) {
+        const itemAleatoire = itemsPossibles[Math.floor(Math.random() * itemsPossibles.length)];
+        itemAleatoire.click(); 
+    }
+
+    document.getElementById('nomClient').value = nomAleatoire + " (Auto)";
+    ajouterClient();
+}
+
+async function servirClientAutomatique() {
+    try {
+        const res = await fetch(`${API}/etat`);
+        const data = await res.json();
+        
+        const caissesOccupees = data.caisses.filter(c => c.ouverte && c.nbClients > 0);
+        if (caissesOccupees.length > 0) {
+            const caisseCible = caissesOccupees.reduce((max, c) => c.nbClients > max.nbClients ? c : max);
+            envoyerAction('/caisse/servir', { numero: caisseCible.numero }, `🤖 (Auto) Client encaissé en caisse ${caisseCible.numero} !`);
+        }
+    } catch (e) {
+        console.log("Erreur dans la simulation automatique");
+    }
+}
+
+// Boucle principale
 setInterval(rafraichir, 2000);
 rafraichir();

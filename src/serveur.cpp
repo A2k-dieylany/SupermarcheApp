@@ -2,17 +2,19 @@
 #include "../lib/httplib.h"
 #include "json_helper.h"
 #include <iostream>
-#include <mutex> // NOUVEAU : La bibliothèque pour le Thread-Safety
+#include <mutex> // La bibliothèque pour le Thread-Safety
+#include <vector>
+#include <string>
 
 void Serveur::demarrer(Supermarche& sm) {
     httplib::Server srv;
     
-    // NOUVEAU : Le cadenas global de notre API
+    // Le cadenas global de notre API
     std::mutex api_mutex; 
 
     // 1. LECTURE : Renvoyer l'état complet du supermarché
     srv.Get("/api/etat", [&](const httplib::Request&, httplib::Response& res) {
-        std::lock_guard<std::mutex> lock(api_mutex); // VERROUILLAGE
+        std::lock_guard<std::mutex> lock(api_mutex); 
         
         json j = supermarcheToJson(sm);
         res.set_content(j.dump(), "application/json");
@@ -21,14 +23,19 @@ void Serveur::demarrer(Supermarche& sm) {
 
     // 2. ACTION : Ajouter un client (AVEC PANIER)
     srv.Post("/api/client/ajouter", [&](const httplib::Request& req, httplib::Response& res) {
-        std::lock_guard<std::mutex> lock(api_mutex); // VERROUILLAGE
+        std::lock_guard<std::mutex> lock(api_mutex); 
         
         try {
             json body = json::parse(req.body);
-            Client nouveauClient(body["nom"]);
             
-            for (int id : body["produitsIds"]) {
-                for (auto p : sm.getCatalogue()) { // Correction auto p (SQLite)
+            // --- CORRECTION DU TYPAGE ---
+            std::string nomClient = body["nom"].get<std::string>();
+            Client nouveauClient(nomClient);
+            
+            std::vector<int> produitsIds = body["produitsIds"].get<std::vector<int>>();
+            
+            for (int id : produitsIds) {
+                for (auto p : sm.getCatalogue()) { 
                     if (p.getId() == id) {
                         nouveauClient.ajouterProduit(p);
                         break;
@@ -49,11 +56,12 @@ void Serveur::demarrer(Supermarche& sm) {
 
     // 3. ACTION : Servir le prochain client d'une caisse
     srv.Post("/api/caisse/servir", [&](const httplib::Request& req, httplib::Response& res) {
-        std::lock_guard<std::mutex> lock(api_mutex); // VERROUILLAGE
+        std::lock_guard<std::mutex> lock(api_mutex); 
         
         try {
             json body = json::parse(req.body);
-            sm.servirClient(body["numero"]);
+            int numero = body["numero"].get<int>(); // CORRECTION TYPAGE
+            sm.servirClient(numero);
             
             res.set_content(supermarcheToJson(sm).dump(), "application/json");
             res.set_header("Access-Control-Allow-Origin", "*");
@@ -66,11 +74,12 @@ void Serveur::demarrer(Supermarche& sm) {
 
     // 4. ACTION : Ouvrir une caisse
     srv.Post("/api/caisse/ouvrir", [&](const httplib::Request& req, httplib::Response& res) {
-        std::lock_guard<std::mutex> lock(api_mutex); // VERROUILLAGE
+        std::lock_guard<std::mutex> lock(api_mutex); 
         
          try {
             json body = json::parse(req.body);
-            sm.ouvrirCaisse(body["numero"]);
+            int numero = body["numero"].get<int>(); // CORRECTION TYPAGE
+            sm.ouvrirCaisse(numero);
             
             res.set_content(supermarcheToJson(sm).dump(), "application/json");
             res.set_header("Access-Control-Allow-Origin", "*");
@@ -83,11 +92,12 @@ void Serveur::demarrer(Supermarche& sm) {
 
     // 5. ACTION : Fermer une caisse
     srv.Post("/api/caisse/fermer", [&](const httplib::Request& req, httplib::Response& res) {
-        std::lock_guard<std::mutex> lock(api_mutex); // VERROUILLAGE
+        std::lock_guard<std::mutex> lock(api_mutex); 
         
          try {
             json body = json::parse(req.body);
-            sm.fermerCaisse(body["numero"]);
+            int numero = body["numero"].get<int>(); // CORRECTION TYPAGE
+            sm.fermerCaisse(numero);
             
             res.set_content(supermarcheToJson(sm).dump(), "application/json");
             res.set_header("Access-Control-Allow-Origin", "*");
@@ -100,11 +110,18 @@ void Serveur::demarrer(Supermarche& sm) {
 
     // 7. ACTION ADMIN : Ajouter un produit
     srv.Post("/api/produit/ajouter", [&](const httplib::Request& req, httplib::Response& res) {
-        std::lock_guard<std::mutex> lock(api_mutex); // VERROUILLAGE
+        std::lock_guard<std::mutex> lock(api_mutex); 
         
         try {
             json body = json::parse(req.body);
-            Produit nouveau(body["id"], body["nom"], body["prix"], body["categorie"]);
+            
+            // CORRECTION TYPAGE
+            int id = body["id"].get<int>();
+            std::string nom = body["nom"].get<std::string>();
+            double prix = body["prix"].get<double>();
+            std::string cat = body["categorie"].get<std::string>();
+            
+            Produit nouveau(id, nom, prix, cat);
             sm.ajouterProduit(nouveau);
             
             res.set_content(supermarcheToJson(sm).dump(), "application/json");
@@ -118,11 +135,12 @@ void Serveur::demarrer(Supermarche& sm) {
 
     // 8. ACTION ADMIN : Supprimer un produit
     srv.Post("/api/produit/supprimer", [&](const httplib::Request& req, httplib::Response& res) {
-        std::lock_guard<std::mutex> lock(api_mutex); // VERROUILLAGE
+        std::lock_guard<std::mutex> lock(api_mutex); 
         
         try {
             json body = json::parse(req.body);
-            sm.supprimerProduit(body["id"]);
+            int id = body["id"].get<int>(); // CORRECTION TYPAGE
+            sm.supprimerProduit(id);
             
             res.set_content(supermarcheToJson(sm).dump(), "application/json");
             res.set_header("Access-Control-Allow-Origin", "*");
@@ -133,15 +151,12 @@ void Serveur::demarrer(Supermarche& sm) {
         }
     });
 
-    // 9. ACTION ADMIN : Modifier le prix d'un produit en direct
+    // 9. ACTION ADMIN : Modifier le prix
     srv.Post("/api/produit/modifier", [&](const httplib::Request& req, httplib::Response& res) {
-        std::lock_guard<std::mutex> lock(api_mutex); // Sécurité anti-crash
+        std::lock_guard<std::mutex> lock(api_mutex);
         
         try {
             json body = json::parse(req.body);
-            
-            // --- CORRECTION : CAST EXPLICITE ---
-            // On force le C++ à comprendre exactement le type de données reçu
             int id = body["id"].get<int>();
             double prix = body["prix"].get<double>();
             
@@ -156,13 +171,36 @@ void Serveur::demarrer(Supermarche& sm) {
         }
     });
 
-    // Indique au serveur où trouver nos futurs fichiers HTML/JS de l'interface (Phase 3)
+    // --- ROUTES POUR L'HISTORIQUE ---
+    srv.Post("/api/historique/ajouter", [&](const httplib::Request& req, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(api_mutex);
+        try {
+            json body = json::parse(req.body);
+            std::string client = body["client"].get<std::string>();
+            double total = body["total"].get<double>();
+            
+            sm.enregistrerTicket(client, total);
+            
+            res.set_content(json{{"status", "ok"}}.dump(), "application/json");
+            res.set_header("Access-Control-Allow-Origin", "*");
+        } catch(...) {
+            res.status = 500;
+        }
+    });
+
+  srv.Get("/api/historique", [&](const httplib::Request& req, httplib::Response& res) {
+        std::lock_guard<std::mutex> lock(api_mutex);
+        
+        // CORRIGÉ : Plus de .dump() ici, car c'est déjà un string !
+        res.set_content(sm.getHistoriqueTickets(), "application/json"); 
+        res.set_header("Access-Control-Allow-Origin", "*");
+    });
+
     srv.set_mount_point("/", "./web");
     
     std::cout << "Serveur demarre sur http://localhost:8080" << std::endl;
     std::cout << "[SYSTEME] Thread-Safety actif (Mutex Lock global)" << std::endl;
     std::cout << "Appuyez sur Ctrl+C pour arreter." << std::endl;
-    
-    // Le serveur écoute en boucle
+
     srv.listen("0.0.0.0", 8080);
 }
