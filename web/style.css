@@ -557,3 +557,29 @@ button {
     from { transform: scale(1); opacity: 1; }
     to { transform: scale(1.02); background-color: #FEF2F2; opacity: 1; }
 }
+/* --- STYLE DU BOUTON RETOUR --- */
+.btn-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background-color: white !important;
+    color: #374151; /* Gris foncé texte */
+    border: 2px solid #E5E7EB; /* Bordure grise claire */
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.95em;
+    text-decoration: none; /* Enlève le soulignement moche du lien */
+    transition: all 0.2s ease; /* Animation fluide */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    cursor: pointer;
+}
+
+/* L'effet magique quand la souris passe dessus */
+.btn-outline:hover {
+    border-color: #8B5CF6; /* Bordure violette */
+    color: #8B5CF6; /* Texte violet */
+    background-color: #F5F3FF !important; /* Fond légèrement violet */
+    transform: translateY(-2px); /* Le bouton se soulève un peu */
+    box-shadow: 0 4px 6px rgba(139, 92, 246, 0.15);
+}
